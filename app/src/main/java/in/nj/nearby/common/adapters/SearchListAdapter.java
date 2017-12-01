@@ -41,6 +41,9 @@ public class SearchListAdapter extends RecyclerView.Adapter<SearchListAdapter.My
     @Override
     public void onBindViewHolder(MyViewHolder holder, final int position) {
         holder.item.setText(filteredItemist.get(position));
+        if(checkedItems.contains(filteredItemist.get(position))){
+            holder.item.setChecked(true);
+        }else holder.item.setChecked(false);
         holder.item.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
@@ -98,6 +101,7 @@ public class SearchListAdapter extends RecyclerView.Adapter<SearchListAdapter.My
         public MyViewHolder(View view){
             super(view);
             item = (CheckBox)view.findViewById(R.id.item_checkBox);
+
         }
 
     }

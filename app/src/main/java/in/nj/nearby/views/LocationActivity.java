@@ -3,9 +3,11 @@ package in.nj.nearby.views;
 import android.Manifest;
 import android.app.Activity;
 import android.app.Dialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
@@ -17,14 +19,12 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -41,11 +41,9 @@ import com.google.android.gms.location.LocationSettingsStatusCodes;
 import com.google.android.gms.location.SettingsClient;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -62,6 +60,7 @@ import java.util.Set;
 
 import in.nj.nearby.BuildConfig;
 import in.nj.nearby.R;
+import in.nj.nearby.common.AppConstants;
 import in.nj.nearby.common.adapters.SearchListAdapter;
 
 /**
@@ -162,11 +161,13 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
     private String mLastUpdateTime;
 
     SearchListAdapter mAdapter;
+    final Set<String> checkedItems = new HashSet<>();
+
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_layout);
+        setContentView(R.layout.activity_map);
 
         mLatitudeTextView = (TextView) findViewById(R.id.latitude_text);
         mLongitudeTextView = (TextView) findViewById(R.id.longitude_text);
@@ -208,25 +209,20 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
     private void createDialog(){
 // custom dialog
         final Dialog dialog = new Dialog(LocationActivity.this);
-        dialog.setContentView(R.layout.activity_items);
+        dialog.setContentView(R.layout.dialog_search_items);
         dialog.getWindow().setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT);
         dialog.setTitle("Type preferences");
 
-        RecyclerView mRecyclerView = (RecyclerView)dialog.findViewById(R.id.recyclerview);
-        EditText mSearchEditText = (EditText)dialog.findViewById(R.id.search_edittext);
+        RecyclerView recyclerView = (RecyclerView)dialog.findViewById(R.id.recyclerview);
+        mSearchEditText = (EditText) dialog.findViewById(R.id.search_edittext);
 
-        List<String> items = new ArrayList<>();
-        items.add("Dining");
-        items.add("Cloths");
-        items.add("Travel");
-        items.add("Electronics");
-
-        Set<String> checkedItems = new HashSet<>();
+        List<String> items = AppConstants.getCatagories();
+        
         mAdapter = new SearchListAdapter(items,checkedItems);
         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(getApplicationContext());
-        mRecyclerView.setLayoutManager(layoutManager);
-        mRecyclerView.setItemAnimator(new DefaultItemAnimator());
-        mRecyclerView.setAdapter(mAdapter);
+        recyclerView.setLayoutManager(layoutManager);
+        recyclerView.setItemAnimator(new DefaultItemAnimator());
+        recyclerView.setAdapter(mAdapter);
 
         mSearchEditText.addTextChangedListener(new TextWatcher() {
             @Override
@@ -246,6 +242,22 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
 
             }
         });
+
+        dialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
+            @Override
+            public void onCancel(DialogInterface dialogInterface) {
+                Log.d("Checked-ITEMS:",checkedItems.toString()) ;
+                mSearchTextView.setText("");
+                mSearchTextView.setTextColor(Color.RED);
+                for(String s : checkedItems) {
+                    if(mSearchTextView.getText().length()<1){
+                        mSearchTextView.setText(s);
+                    }else
+                    mSearchTextView.setText(mSearchTextView.getText()+","+s);
+                }
+            }
+        });
+
         dialog.show();
     }
 
