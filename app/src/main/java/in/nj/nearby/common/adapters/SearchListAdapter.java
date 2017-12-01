@@ -101,7 +101,6 @@ public class SearchListAdapter extends RecyclerView.Adapter<SearchListAdapter.My
         public MyViewHolder(View view){
             super(view);
             item = (CheckBox)view.findViewById(R.id.item_checkBox);
-
         }
 
     }

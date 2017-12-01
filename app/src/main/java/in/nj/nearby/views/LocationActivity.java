@@ -39,11 +39,15 @@ import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.LocationSettingsResponse;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
 import com.google.android.gms.location.SettingsClient;
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
@@ -53,6 +57,7 @@ import com.google.android.gms.tasks.Task;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -163,6 +168,12 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
     SearchListAdapter mAdapter;
     final Set<String> checkedItems = new HashSet<>();
 
+    //this is used to store permanent markers on the map
+    HashMap<String,Marker> markerHashMap = new HashMap<>();
+
+    //this is used to stop temporary markers on the map
+    List<Marker> markersOnMap = new ArrayList<>();
+
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -217,7 +228,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
         mSearchEditText = (EditText) dialog.findViewById(R.id.search_edittext);
 
         List<String> items = AppConstants.getCatagories();
-        
+
         mAdapter = new SearchListAdapter(items,checkedItems);
         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(getApplicationContext());
         recyclerView.setLayoutManager(layoutManager);
@@ -255,10 +266,44 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
                     }else
                     mSearchTextView.setText(mSearchTextView.getText()+","+s);
                 }
+                //TODO:
+                //CAll api , get marker and then call set markers on the map,
+
+                setMarkersOnMap();
             }
         });
 
         dialog.show();
+    }
+
+    private void setMarkersOnMap() {
+        //remove temporary markers from the map
+        for(Marker marker : markersOnMap){
+            marker.remove();
+        }
+        //clear list of temp markers
+        markersOnMap.clear();
+
+        //create and add temp markers on the list
+        markersOnMap.add(gMap.addMarker(new MarkerOptions().position(new LatLng(18.5540681,73.8798155)).
+                icon(BitmapDescriptorFactory.fromResource(R.drawable.shop))));
+        markersOnMap.add(gMap.addMarker(new MarkerOptions().position(new LatLng(18.5528487,73.8791715)).
+                icon(BitmapDescriptorFactory.fromResource(R.drawable.shop))));
+
+        LatLngBounds.Builder builder = new LatLngBounds.Builder();
+        for(Marker m : markersOnMap){
+            builder.include(m.getPosition());
+        }
+        for(String key : markerHashMap.keySet()){
+            Marker m = markerHashMap.get(key);
+            builder.include(m.getPosition());
+        }
+        LatLngBounds bounds = builder.build();
+        int width = getResources().getDisplayMetrics().widthPixels;
+        int height = getResources().getDisplayMetrics().heightPixels;
+        int padding = (int) (width * 0.10);
+        CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, width, height, padding);
+        gMap.animateCamera(cu);
     }
 
     /**
@@ -492,10 +537,12 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
                     return;
                 }
                 gMap.setMyLocationEnabled(true);
-                gMap.clear();
-                gMap.addMarker(new MarkerOptions().position(currentLocation));
+                if(markerHashMap.containsKey(AppConstants.CURRENT_LOCATION_KEY))
+                    markerHashMap.get(AppConstants.CURRENT_LOCATION_KEY).remove();
+                Marker marker = gMap.addMarker(new MarkerOptions().position(currentLocation));
+                markerHashMap.put(AppConstants.CURRENT_LOCATION_KEY,marker);
                 if(!zoomToLocationOnlyOnce) {
-                    gMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 17));
+                    gMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 17));
                     zoomToLocationOnlyOnce = true;
                 }
             }
@@ -668,8 +715,9 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
         gMap.setTrafficEnabled(true);
         if(mCurrentLocation!=null){
             LatLng currentLocation = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
-            gMap.clear();
-            gMap.addMarker(new MarkerOptions().position(currentLocation));
+            //gMap.clear();
+            Marker marker = gMap.addMarker(new MarkerOptions().position(currentLocation));
+            markerHashMap.put(AppConstants.CURRENT_LOCATION_KEY,marker);
             gMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation,17));
         }
     }

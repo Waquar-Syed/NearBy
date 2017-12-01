@@ -9,6 +9,8 @@ import java.util.List;
 
 public class AppConstants {
 
+    public static final String CURRENT_LOCATION_KEY = "CURRENT_LOCATION_KEY";
+
     public static List<String> getCatagories(){
         List<String> items = new ArrayList<>();
         items.add("Dining");
