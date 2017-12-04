@@ -35,6 +35,8 @@
             android:layout_width="match_parent"
             android:layout_height="22dp"
             android:hint="Search"
+            android:textColor="@color/grey_blue"
+            android:textStyle="bold"
             android:layout_margin="10dp"
             android:drawableLeft="@drawable/search"/>
 

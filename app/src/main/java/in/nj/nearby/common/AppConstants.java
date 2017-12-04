@@ -19,4 +19,7 @@ public class AppConstants {
         items.add("Electronics");
         return items;
     }
+
+    public static final String GET_ADDRESS_URL = "https://maps.googleapis.com/maps/api/geocode/json?";
+    public static final String GET_POS_URL = "http://192.168.43.228:8080/api/getPOS?";
 }

@@ -24,10 +24,12 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.VolleyError;
 import com.google.android.gms.common.api.ApiException;
 import com.google.android.gms.common.api.ResolvableApiException;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -53,6 +55,7 @@ import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
+import com.google.gson.Gson;
 
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -61,12 +64,18 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 import in.nj.nearby.BuildConfig;
 import in.nj.nearby.R;
 import in.nj.nearby.common.AppConstants;
 import in.nj.nearby.common.adapters.SearchListAdapter;
+import in.nj.nearby.common.interfaces.listeners.ServiceResponseListener;
+import in.nj.nearby.model.Coordinates;
+import in.nj.nearby.model.POS;
+import in.nj.nearby.model.POSDetails;
+import in.nj.nearby.services.ServerCommunication;
 
 /**
  * Created by hp on 30-11-2017.
@@ -169,7 +178,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
     final Set<String> checkedItems = new HashSet<>();
 
     //this is used to store permanent markers on the map
-    HashMap<String,Marker> markerHashMap = new HashMap<>();
+    Map<String,Marker> markerHashMap = new HashMap<>();
 
     //this is used to stop temporary markers on the map
     List<Marker> markersOnMap = new ArrayList<>();
@@ -180,9 +189,9 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_map);
 
-        mLatitudeTextView = (TextView) findViewById(R.id.latitude_text);
-        mLongitudeTextView = (TextView) findViewById(R.id.longitude_text);
-        mSearchTextView = (TextView)findViewById(R.id.search);
+        mLatitudeTextView = findViewById(R.id.latitude_text);
+        mLongitudeTextView = findViewById(R.id.longitude_text);
+        mSearchTextView = findViewById(R.id.search);
 
         // Set labels.
         mLatitudeLabel = getResources().getString(R.string.latitude_label);
@@ -204,8 +213,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
         buildLocationSettingsRequest();
         startLocationUpdates();
 
-        map = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
+        map = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
 
         map.getMapAsync(this);
 
@@ -259,7 +267,6 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
             public void onCancel(DialogInterface dialogInterface) {
                 Log.d("Checked-ITEMS:",checkedItems.toString()) ;
                 mSearchTextView.setText("");
-                mSearchTextView.setTextColor(Color.RED);
                 for(String s : checkedItems) {
                     if(mSearchTextView.getText().length()<1){
                         mSearchTextView.setText(s);
@@ -267,28 +274,91 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
                     mSearchTextView.setText(mSearchTextView.getText()+","+s);
                 }
                 //TODO:
+
+                clearMarkerOnMap();
+
+                getMerchantList(mSearchTextView.getText().toString().split(","));
                 //CAll api , get marker and then call set markers on the map,
 
-                setMarkersOnMap();
+
+                //setMarkersOnMap(latLng.getResults().get(0).getFormatted_address(), latLng.getResults().get(0).getGeometry().getLocation());
             }
         });
 
         dialog.show();
     }
 
-    private void setMarkersOnMap() {
-        //remove temporary markers from the map
+    private void clearMarkerOnMap() {
         for(Marker marker : markersOnMap){
             marker.remove();
         }
-        //clear list of temp markers
         markersOnMap.clear();
+    }
+
+    private void getMerchantList(String[] type) {
+        Map<String, String> parameter = new HashMap<>();
+        int i=1;
+        for (String types : type){
+            parameter.put("type"+(i++),types);
+        }
+        ServerCommunication.getmInstance().addJSONGetRequest(AppConstants.GET_POS_URL, parameter, null, new ServiceResponseListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                System.out.println("No Response");
+            }
+
+            @Override
+            public void onResponse(Object response) {
+                Gson gson = new Gson();
+                POS pos = gson.fromJson(response.toString(), POS.class);
+                getCoordinatesForPosList(pos);
+            }
+        });
+    }
+
+    private void getCoordinatesForPosList(POS pos) {
+        for(POSDetails posDetails : pos.getPos()){
+            getLatLngForAddress(posDetails.getOUTER_POSTAL_CODE() + posDetails.getINNER_POSTAL_CODE());
+        }
+    }
+
+    private void getLatLngForAddress(String address) {
+        Map<String, String> parameter = new HashMap<>();
+        parameter.put("address",address);
+        parameter.put("key","AIzaSyCWcjr8FbpiGxerhFjKRWJH0j6LEl9A4OU");
+
+        ServerCommunication.getmInstance().addJSONGetRequest(AppConstants.GET_ADDRESS_URL, parameter, getHeaders(), new ServiceResponseListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+
+            }
+
+            @Override
+            public void onResponse(Object response) {
+                Gson gson = new Gson();
+                Coordinates latLng = gson.fromJson(response.toString(), Coordinates.class);
+                setMarkersOnMap(latLng.getResults().get(0).getFormatted_address(), latLng.getResults().get(0).getGeometry().getLocation());
+            }
+        });
+    }
+
+    private Map<String, String> getHeaders() {
+        return null;
+    }
+
+    private void setMarkersOnMap(String formatted_address, in.nj.nearby.model.Location location) {
+        //remove temporary markers from the map
+
+        //clear list of temp markers
+        //markersOnMap.clear();
 
         //create and add temp markers on the list
-        markersOnMap.add(gMap.addMarker(new MarkerOptions().position(new LatLng(18.5540681,73.8798155)).
-                icon(BitmapDescriptorFactory.fromResource(R.drawable.shop))));
-        markersOnMap.add(gMap.addMarker(new MarkerOptions().position(new LatLng(18.5528487,73.8791715)).
-                icon(BitmapDescriptorFactory.fromResource(R.drawable.shop))));
+        /*markersOnMap.add(gMap.addMarker(new MarkerOptions().position(new LatLng(18.5540681,73.8798155)).
+                icon(BitmapDescriptorFactory.fromResource(R.drawable.shop))));*/
+        MarkerOptions marker = new MarkerOptions().position(new LatLng(location.getLat(),location.getLng()));
+        marker.snippet(formatted_address);
+
+        markersOnMap.add(gMap.addMarker(marker));
 
         LatLngBounds.Builder builder = new LatLngBounds.Builder();
         for(Marker m : markersOnMap){
@@ -304,6 +374,62 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
         int padding = (int) (width * 0.10);
         CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, width, height, padding);
         gMap.animateCamera(cu);
+    }
+
+    GoogleMap.OnMarkerClickListener markerClickListener = new GoogleMap.OnMarkerClickListener() {
+        @Override
+        public boolean onMarkerClick(final Marker marker) {
+            if(!isCurrentLocation(marker)) {
+                Dialog dialog = new Dialog(LocationActivity.this);
+                dialog.setContentView(R.layout.info_dialog);
+                dialog.setCancelable(true);
+                TextView title = dialog.findViewById(R.id.title);
+                title.setText(marker.getTitle());
+                TextView address = dialog.findViewById(R.id.address);
+                address.setText(marker.getSnippet().toString());
+                Button navigate = dialog.findViewById(R.id.btn_navigate);
+                navigate.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        setNavigationButton(marker);
+                    }
+                });
+
+                Button share = dialog.findViewById(R.id.btn_share);
+                setShareButtonClickListener(share, marker);
+                dialog.show();
+                return true;
+            }
+            return false;
+        }
+    };
+
+    private boolean isCurrentLocation(Marker marker) {
+        return ((marker.getPosition().longitude == mCurrentLocation.getLongitude()) && (marker.getPosition().latitude == mCurrentLocation.getLatitude()));
+    }
+
+    private void setShareButtonClickListener(Button share, final Marker marker) {
+        share.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                setShareButton(marker);
+            }
+        });
+    }
+
+    private void setShareButton(Marker marker) {
+        String whatsAppMessage = "http://maps.google.com/maps?q=" + marker.getPosition().latitude + "," + marker.getPosition().longitude;
+        Intent sendIntent = new Intent();
+        sendIntent.setAction(Intent.ACTION_SEND);
+        sendIntent.putExtra(Intent.EXTRA_TEXT, whatsAppMessage);
+        sendIntent.setType("text/plain");
+        sendIntent.setPackage("com.whatsapp");
+        startActivity(sendIntent);
+    }
+
+    private void setNavigationButton(Marker marker) {
+        Intent intent = new Intent(Intent.ACTION_VIEW,Uri.parse("http://maps.google.com/maps?saddr=" + "51.461561,-0.210521" + "&daddr=" + marker.getPosition().latitude+","+marker.getPosition().longitude));
+        startActivity(intent);
     }
 
     /**
@@ -374,7 +500,11 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
             public void onLocationResult(LocationResult locationResult) {
                 super.onLocationResult(locationResult);
 
-                mCurrentLocation = locationResult.getLastLocation();
+                //mCurrentLocation = locationResult.getLastLocation();
+
+                mCurrentLocation = new Location("My Location");
+                mCurrentLocation.setLatitude(51.461561);
+                mCurrentLocation.setLongitude(-0.210521);
                 mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
                 updateLocationUI();
             }
@@ -530,7 +660,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
           /*  mLastUpdateTimeTextView.setText(String.format(Locale.ENGLISH, "%s: %s",
                     mLastUpdateTimeLabel, mLastUpdateTime));
         */
-            LatLng currentLocation = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
+            LatLng currentLocation = new LatLng(51.461561, -0.210521);
             if (gMap != null) {
                 if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                     callForLocationPermission();
@@ -539,7 +669,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
                 gMap.setMyLocationEnabled(true);
                 if(markerHashMap.containsKey(AppConstants.CURRENT_LOCATION_KEY))
                     markerHashMap.get(AppConstants.CURRENT_LOCATION_KEY).remove();
-                Marker marker = gMap.addMarker(new MarkerOptions().position(currentLocation));
+                Marker marker = gMap.addMarker(new MarkerOptions().position(currentLocation).icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_here)));
                 markerHashMap.put(AppConstants.CURRENT_LOCATION_KEY,marker);
                 if(!zoomToLocationOnlyOnce) {
                     gMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 17));
@@ -713,12 +843,16 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
     public void onMapReady(GoogleMap googleMap) {
         gMap = googleMap;
         gMap.setTrafficEnabled(true);
+        gMap.setOnMarkerClickListener(markerClickListener);
         if(mCurrentLocation!=null){
-            LatLng currentLocation = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
+//            LatLng currentLocation = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
+
+            LatLng currentLocation = new LatLng(51.461561, -0.210521);
             //gMap.clear();
-            Marker marker = gMap.addMarker(new MarkerOptions().position(currentLocation));
+            Marker marker = gMap.addMarker(new MarkerOptions().position(currentLocation).icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_here)));
             markerHashMap.put(AppConstants.CURRENT_LOCATION_KEY,marker);
             gMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation,17));
         }
     }
+
 }
