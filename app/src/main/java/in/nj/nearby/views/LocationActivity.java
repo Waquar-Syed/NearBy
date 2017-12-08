@@ -188,6 +188,8 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
     //this is used to stop temporary markers on the map
     List<Marker> markersOnMap = new ArrayList<>();
 
+    List<POSModel> posModelList;
+
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -324,7 +326,6 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
         });
     }
 
-    List<POSModel> posModelList;
     private void getCoordinatesForPosList(POS pos) {
         posModelList = new ArrayList<>();
         for(POSDetails posDetails : pos.getPos()){
@@ -424,22 +425,17 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
         posModel.setOnCallClickListener(new PosButtons.OnCallClickListener() {
             @Override
             public void onClick(View view) {
+               setCallButton(marker);
+            }
+        });
+        posModel.setOnShareClickListener(new PosButtons.OnShareClickListener() {
+            @Override
+            public void onClick(View v) {
                 setShareButton(marker);
             }
         });
     }
 
-   /* private BitmapDescriptor getBitmapDescriptor(Context context, int id) {
-        Drawable vectorDrawable = context.getDrawable(id);
-        int height = ((int) Utils.convertDpToPixel(context, 25));
-        int width = ((int) Utils.convertDpToPixel(context, 15));
-        vectorDrawable.setBounds(0, 0, width, height);
-        vectorDrawable.setTint(getResources().getColor(R.color.grey_blue));
-        Bitmap bm = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-        Canvas canvas = new Canvas(bm);
-        vectorDrawable.draw(canvas);
-        return BitmapDescriptorFactory.fromBitmap(bm);
-    }*/
 
     private int getDrawableForDescription(String desc) {
         switch (desc){
@@ -508,18 +504,28 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
     }
 
     private void setShareButton(Marker marker) {
-        String whatsAppMessage = "http://maps.google.com/maps?q=" + marker.getPosition().latitude + "," + marker.getPosition().longitude;
+        String message = "http://maps.google.com/maps?q=" + marker.getPosition().latitude + "," + marker.getPosition().longitude;
         Intent sendIntent = new Intent();
         sendIntent.setAction(Intent.ACTION_SEND);
-        sendIntent.putExtra(Intent.EXTRA_TEXT, whatsAppMessage);
+        sendIntent.putExtra(Intent.EXTRA_TEXT, "See you at: " + message);
         sendIntent.setType("text/plain");
-        sendIntent.setPackage("com.whatsapp");
-        startActivity(sendIntent);
+        startActivity(Intent.createChooser(sendIntent, "Share Through"));
     }
 
     private void setNavigationButton(Marker marker) {
         Intent intent = new Intent(Intent.ACTION_VIEW,Uri.parse("http://maps.google.com/maps?saddr=" + "51.461561,-0.210521" + "&daddr=" + marker.getPosition().latitude+","+marker.getPosition().longitude));
         startActivity(intent);
+    }
+
+    private void setCallButton(Marker marker) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
+            Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + "8983504649"));
+            startActivity(intent);
+        }else{
+            ActivityCompat.requestPermissions(LocationActivity.this,
+                    new String[]{Manifest.permission.CALL_PHONE},
+                    REQUEST_PERMISSIONS_REQUEST_CODE);
+        }
     }
 
     /**
@@ -855,7 +861,8 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
     private void requestPermissions() {
         boolean shouldProvideRationale =
                 ActivityCompat.shouldShowRequestPermissionRationale(this,
-                        Manifest.permission.ACCESS_FINE_LOCATION);
+                        Manifest.permission.ACCESS_FINE_LOCATION) || ActivityCompat.shouldShowRequestPermissionRationale(this,
+                        Manifest.permission.CALL_PHONE);
 
         // Provide an additional rationale to the user. This would happen if the user denied the
         // request previously, but didn't check the "Don't ask again" checkbox.
@@ -867,7 +874,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
                         public void onClick(View view) {
                             // Request permission
                             ActivityCompat.requestPermissions(LocationActivity.this,
-                                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.CALL_PHONE},
                                     REQUEST_PERMISSIONS_REQUEST_CODE);
                         }
                     });
@@ -877,7 +884,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
             // sets the permission in a given state or the user denied the permission
             // previously and checked "Never ask again".
             ActivityCompat.requestPermissions(LocationActivity.this,
-                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.CALL_PHONE},
                     REQUEST_PERMISSIONS_REQUEST_CODE);
         }
     }
