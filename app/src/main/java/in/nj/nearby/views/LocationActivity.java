@@ -397,6 +397,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
         markerOptions.title(mName);
 
         final Marker marker = gMap.addMarker(markerOptions);
+        posModel.setMarker(marker);
 
         markersOnMap.add(marker);
 
@@ -479,7 +480,14 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
                 Button share = dialog.findViewById(R.id.btn_share);
                 setShareButtonClickListener(share, marker);
                 dialog.show();*/
-                createMarkersDialog(posModelList,markersOnMap.indexOf(marker));
+                int index = 0;
+                for(POSModel posModel : posModelList){
+                    if(posModel.getMarker().equals(marker)){
+                        createMarkersDialog(posModelList,index);
+                        return true;
+                    }
+                    index++;
+                }
                 return true;
             }
             return false;
