@@ -3,10 +3,13 @@ package in.nj.nearby.views;
 import android.Manifest;
 import android.app.Activity;
 import android.app.Dialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.location.Location;
@@ -23,10 +26,12 @@ import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -58,6 +63,7 @@ import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.gson.Gson;
+import com.google.maps.android.ui.IconGenerator;
 
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -391,14 +397,22 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
         /*markersOnMap.add(gMap.addMarker(new MarkerOptions().position(new LatLng(18.5540681,73.8798155)).
                 icon(BitmapDescriptorFactory.fromResource(R.drawable.shop))));*/
         posModel.setAddress(formatted_address);
+
+       /* TextView text = new TextView(this);
+        text.setText(posModel.getTitle()+"\n"+AppConstants.getOffer());
+        IconGenerator generator = new IconGenerator(this);
+        generator.setBackground(getDrawable(getDrawableForDescription(desc)));
+        generator.setContentView(text);
+        Bitmap icon = generator.makeIcon();*/
+
         final MarkerOptions markerOptions = new MarkerOptions().position(new LatLng(location.getLat(),location.getLng()))
-                .icon(BitmapDescriptorFactory.fromResource(getDrawableForDescription(desc)))
+                .icon(BitmapDescriptorFactory.fromBitmap(getBitmapFromDesc(desc,posModel)))
                 .anchor(0.5f, 1);
         markerOptions.snippet(formatted_address);
         markerOptions.title(mName);
-
         final Marker marker = gMap.addMarker(markerOptions);
         posModel.setMarker(marker);
+
 
         markersOnMap.add(marker);
 
@@ -986,6 +1000,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
 
 private View posDialog;
     RecyclerView posItemRecycleView;
+    int lastPosition;
     void createMarkersDialog(List<POSModel> posModels,int focusPosition){
        /* final Dialog dialog = new Dialog(LocationActivity.this);
         dialog.setContentView(R.layout.layout_dialog_poslist);
@@ -1000,6 +1015,51 @@ private View posDialog;
         posItemRecycleView.setLayoutManager(layoutManager);
         posItemRecycleView.setItemAnimator(new DefaultItemAnimator());
         posItemRecycleView.setAdapter(adapter);
+
+        posItemRecycleView.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
+                super.onScrolled(recyclerView, dx, dy);
+
+
+
+                //gMap.animateCamera(CameraUpdateFactory.newLatLng(posModelList.get(centerPos).getMarker().getPosition()));
+            }
+
+            boolean scrolling,stoped;
+            @Override
+            public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+                super.onScrollStateChanged(recyclerView, newState);
+                switch (newState) {
+                    case RecyclerView.SCROLL_STATE_IDLE:
+                        System.out.println("The RecyclerView is not scrolling");
+                        if(scrolling){
+                            int center = posItemRecycleView.getWidth()/2;
+                            View centerView = posItemRecycleView.findChildViewUnder(center,posItemRecycleView.getTop());
+                            int centerPos = posItemRecycleView.getChildAdapterPosition(centerView);
+                            Log.d("CenterPOS",centerPos+"");
+                            if(lastPosition!=centerPos && centerPos>=0){
+                                POSModel posModel = posModelList.get(centerPos);
+                                LatLng latLng = posModel.getMarker().getPosition();
+                                gMap.animateCamera(CameraUpdateFactory.newLatLng(latLng));
+                                lastPosition = centerPos;
+                                posItemRecycleView.getLayoutManager().smoothScrollToPosition(recyclerView,new RecyclerView.State(),centerPos);
+                            }
+                            scrolling = false;
+                        }
+                        break;
+                    case RecyclerView.SCROLL_STATE_DRAGGING:
+                        System.out.println("Scrolling now");
+                        break;
+                    case RecyclerView.SCROLL_STATE_SETTLING:
+                        System.out.println("Scroll Settling");
+
+                        scrolling = true;
+                        break;
+                }
+            }
+        });
+
         posDialog.setVisibility(View.VISIBLE);
         focusPosItem(focusPosition);
         //dialog.show();
@@ -1017,5 +1077,32 @@ private View posDialog;
             posDialog.setVisibility(View.GONE);
         }else
         super.onBackPressed();
+    }
+
+
+    Bitmap getBitmapFromDesc(String desc,POSModel posModel){
+        LayoutInflater inflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        View view = inflater.inflate(R.layout.layout_marker_icon, null);
+        TextView tv = (TextView)view.findViewById(R.id.marker_text);
+        ImageView iv = (ImageView)view.findViewById(R.id.marker_icon);
+        tv.setText(posModel.getOffers());
+        iv.setBackground(getDrawable(getDrawableForDescription(desc)));
+
+        view.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+
+       // view.layout(0, 0, view.getMeasuredWidth(), view.getMeasuredHeight());
+        view.layout(0, 0, view.getMeasuredWidth(), view.getMeasuredHeight());
+
+        Bitmap bitmap = Bitmap.createBitmap(view.getMeasuredWidth(),
+                view.getMeasuredHeight(),
+                Bitmap.Config.ARGB_8888);
+
+        Canvas c = new Canvas(bitmap);
+
+        //Render this view (and all of its children) to the given Canvas
+        view.draw(c);
+
+        return bitmap;
     }
 }
