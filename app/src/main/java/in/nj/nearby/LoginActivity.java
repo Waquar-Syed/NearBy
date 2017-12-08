@@ -57,9 +57,6 @@ public class LoginActivity extends AppCompatActivity implements LoaderManager.Lo
     private AutoCompleteTextView mEmailView;
     private EditText mPasswordView;
 
-    private View mProgressView;
-    private View mLoginFormView;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -92,9 +89,6 @@ public class LoginActivity extends AppCompatActivity implements LoaderManager.Lo
                 attemptLogin();
             }
         });
-
-        mLoginFormView = findViewById(R.id.login_form);
-        mProgressView = findViewById(R.id.login_progress);
 
         setDeviceInstanceId();
     }
