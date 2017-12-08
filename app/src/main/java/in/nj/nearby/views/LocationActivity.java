@@ -7,6 +7,8 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
@@ -70,18 +72,21 @@ import java.util.Set;
 import in.nj.nearby.BuildConfig;
 import in.nj.nearby.R;
 import in.nj.nearby.common.AppConstants;
+import in.nj.nearby.common.adapters.POSItemsListAdapter;
 import in.nj.nearby.common.adapters.SearchListAdapter;
+import in.nj.nearby.common.interfaces.listeners.PosButtons;
 import in.nj.nearby.common.interfaces.listeners.ServiceResponseListener;
 import in.nj.nearby.model.Coordinates;
 import in.nj.nearby.model.POS;
 import in.nj.nearby.model.POSDetails;
+import in.nj.nearby.model.POSModel;
 import in.nj.nearby.services.ServerCommunication;
 
 /**
  * Created by hp on 30-11-2017.
  */
 
-public class LocationActivity extends AppCompatActivity implements OnMapReadyCallback, GoogleMap.OnMarkerDragListener{
+public class LocationActivity extends AppCompatActivity implements OnMapReadyCallback{
     private static final String TAG = LocationActivity.class.getSimpleName();
 
     private GoogleMap gMap;
@@ -223,6 +228,8 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
                 createDialog();
             }
         });
+        posDialog = (View)findViewById(R.id.posDialog);
+        //createMarkersDialog(null,0);
     }
 
     private void createDialog(){
@@ -278,6 +285,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
                 clearMarkerOnMap();
 
                 getMerchantList(mSearchTextView.getText().toString().split(","));
+
                 //CAll api , get marker and then call set markers on the map,
 
 
@@ -316,14 +324,38 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
         });
     }
 
+    List<POSModel> posModelList;
     private void getCoordinatesForPosList(POS pos) {
+        posModelList = new ArrayList<>();
         for(POSDetails posDetails : pos.getPos()){
-            getLatLngForAddress(posDetails.getOUTER_POSTAL_CODE() + posDetails.getINNER_POSTAL_CODE(),posDetails.getM_NAME(),posDetails.getMCC_DSC());
+            POSModel posModel = new POSModel(posDetails.getM_NAME(),posDetails.getOUTER_POSTAL_CODE() + posDetails.getINNER_POSTAL_CODE(),
+                    AppConstants.getOffer(),posDetails.getMID());
+            posModel.setOnCallClickListener(new PosButtons.OnCallClickListener() {
+                @Override
+                public void onClick(View view) {
+                    Log.d("CALLCLICK","hanji");
+                }
+            });
+            posModel.setOnNavigationClickListener(new PosButtons.OnNavigationClickListener() {
+                @Override
+                public void onClick(View view) {
+                    Log.d("NavigationCLICK","hanji");
+                }
+            });
+            posModel.setOnShareClickListener(new PosButtons.OnShareClickListener() {
+                @Override
+                public void onClick(View view) {
+                    Log.d("shareCLICK","hanji");
+                }
+            });
+            posModelList.add(posModel);
+            getLatLngForAddress(posDetails.getOUTER_POSTAL_CODE() + posDetails.getINNER_POSTAL_CODE(),posDetails.getM_NAME(),posDetails.getMCC_DSC(),posModel);
         }
     }
 
-    private void getLatLngForAddress(String address, final String mName, final String desc) {
+    private void getLatLngForAddress(String address, final String mName, final String desc, final POSModel posModel) {
         final Map<String, String> parameter = new HashMap<>();
+        posModel.setCategory(desc);
         parameter.put("address",address);
         parameter.put("key","AIzaSyCWcjr8FbpiGxerhFjKRWJH0j6LEl9A4OU");
 
@@ -339,7 +371,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
                 Gson gson = new Gson();
 
                 Coordinates latLng = gson.fromJson(response.toString(), Coordinates.class);
-                setMarkersOnMap(latLng.getResults().get(0).getFormatted_address(), latLng.getResults().get(0).getGeometry().getLocation(),mName,desc);
+                setMarkersOnMap(latLng.getResults().get(0).getFormatted_address(), latLng.getResults().get(0).getGeometry().getLocation(),mName,desc,posModel);
             }
         });
     }
@@ -348,7 +380,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
         return null;
     }
 
-    private void setMarkersOnMap(String formatted_address, in.nj.nearby.model.Location location,String mName,String desc) {
+    private void setMarkersOnMap(String formatted_address, in.nj.nearby.model.Location location,String mName,String desc,POSModel posModel) {
         //remove temporary markers from the map
 
         //clear list of temp markers
@@ -357,15 +389,16 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
         //create and add temp markers on the list
         /*markersOnMap.add(gMap.addMarker(new MarkerOptions().position(new LatLng(18.5540681,73.8798155)).
                 icon(BitmapDescriptorFactory.fromResource(R.drawable.shop))));*/
-
-        MarkerOptions marker = new MarkerOptions().position(new LatLng(location.getLat(),location.getLng()))
+        posModel.setAddress(formatted_address);
+        final MarkerOptions markerOptions = new MarkerOptions().position(new LatLng(location.getLat(),location.getLng()))
                 .icon(BitmapDescriptorFactory.fromResource(getDrawableForDescription(desc)))
                 .anchor(0.5f, 1);
-        marker.snippet(formatted_address);
-        marker.title(mName);
+        markerOptions.snippet(formatted_address);
+        markerOptions.title(mName);
 
+        final Marker marker = gMap.addMarker(markerOptions);
 
-        markersOnMap.add(gMap.addMarker(marker));
+        markersOnMap.add(marker);
 
         LatLngBounds.Builder builder = new LatLngBounds.Builder();
         for(Marker m : markersOnMap){
@@ -381,6 +414,18 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
         int padding = (int) (width * 0.10);
         CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, width, height, padding);
         gMap.animateCamera(cu);
+        posModel.setOnNavigationClickListener(new PosButtons.OnNavigationClickListener() {
+            @Override
+            public void onClick(View view) {
+                setNavigationButton(marker);
+            }
+        });
+        posModel.setOnCallClickListener(new PosButtons.OnCallClickListener() {
+            @Override
+            public void onClick(View view) {
+                setShareButton(marker);
+            }
+        });
     }
 
    /* private BitmapDescriptor getBitmapDescriptor(Context context, int id) {
@@ -413,8 +458,8 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
     GoogleMap.OnMarkerClickListener markerClickListener = new GoogleMap.OnMarkerClickListener() {
         @Override
         public boolean onMarkerClick(final Marker marker) {
-            if(!isCurrentLocation(marker)) {
-                Dialog dialog = new Dialog(LocationActivity.this);
+            if(!marker.equals(markerHashMap.get(AppConstants.CURRENT_LOCATION_KEY))) {
+                /*Dialog dialog = new Dialog(LocationActivity.this);
                 dialog.setContentView(R.layout.info_dialog);
                 dialog.setCancelable(true);
                 TextView title = dialog.findViewById(R.id.title);
@@ -433,7 +478,8 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
 
                 Button share = dialog.findViewById(R.id.btn_share);
                 setShareButtonClickListener(share, marker);
-                dialog.show();
+                dialog.show();*/
+                createMarkersDialog(posModelList,markersOnMap.indexOf(marker));
                 return true;
             }
             return false;
@@ -696,7 +742,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
           /*  mLastUpdateTimeTextView.setText(String.format(Locale.ENGLISH, "%s: %s",
                     mLastUpdateTimeLabel, mLastUpdateTime));
         */
-            LatLng currentLocation = new LatLng(mCurrentLocation.getLatitude(),mCurrentLocation.getLongitude());
+            /*LatLng currentLocation = new LatLng(mCurrentLocation.getLatitude(),mCurrentLocation.getLongitude());
             if (gMap != null) {
                 if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                     callForLocationPermission();
@@ -712,7 +758,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
                     gMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 17));
                     zoomToLocationOnlyOnce = true;
                 }
-            }
+            }*/
         }
     }
 
@@ -881,31 +927,80 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
         gMap = googleMap;
         gMap.setTrafficEnabled(true);
         gMap.setOnMarkerClickListener(markerClickListener);
-        gMap.setOnMarkerDragListener(this);
+        mCurrentLocation = new Location("My Location");
+        mCurrentLocation.setLatitude(51.461561);
+        mCurrentLocation.setLongitude(-0.210521);
         if(mCurrentLocation!=null){
-           LatLng currentLocation = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
+//            LatLng currentLocation = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
 
-            //LatLng currentLocation = new LatLng(51.461561, -0.210521);
+            LatLng currentLocation = new LatLng(51.461561, -0.210521);
             //gMap.clear();
             Marker marker = gMap.addMarker(new MarkerOptions().position(currentLocation).icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_here)));
+            marker.setDraggable(true);
+            gMap.setOnMarkerDragListener(new GoogleMap.OnMarkerDragListener() {
+                @Override
+                public void onMarkerDragStart(Marker marker) {
+
+                }
+
+                @Override
+                public void onMarkerDrag(Marker marker) {
+
+                }
+
+                @Override
+                public void onMarkerDragEnd(Marker marker) {
+                    if(marker.equals(markerHashMap.get(AppConstants.CURRENT_LOCATION_KEY))){
+                        LatLng latLng = marker.getPosition();
+                        Log.d("DRAGGED Location",latLng.toString());
+                        gMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng,17));
+                        //call APis
+                        Location location = new Location("markerLocation");
+                        location.setLatitude(latLng.latitude);
+                        location.setLongitude(latLng.longitude);
+                        double distance = AppConstants.getFixedLocation().distanceTo(location);
+                        Log.d("Distance",distance+"");
+                        getMerchantList(mSearchTextView.getText().toString().split(","));
+                    }
+                }
+            });
             markerHashMap.put(AppConstants.CURRENT_LOCATION_KEY,marker);
             gMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation,17));
         }
     }
-    @Override
-    public void onMarkerDragStart(Marker marker) {
 
+private View posDialog;
+    RecyclerView posItemRecycleView;
+    void createMarkersDialog(List<POSModel> posModels,int focusPosition){
+       /* final Dialog dialog = new Dialog(LocationActivity.this);
+        dialog.setContentView(R.layout.layout_dialog_poslist);
+       */// dialog.getWindow().setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
+        posDialog.setVisibility(View.GONE);
+        posItemRecycleView = findViewById(R.id.recyclerview);
+
+        List<POSModel> items =posModels;
+
+        POSItemsListAdapter adapter = new POSItemsListAdapter(items,this);
+        RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(getApplicationContext(),LinearLayoutManager.HORIZONTAL,false);
+        posItemRecycleView.setLayoutManager(layoutManager);
+        posItemRecycleView.setItemAnimator(new DefaultItemAnimator());
+        posItemRecycleView.setAdapter(adapter);
+        posDialog.setVisibility(View.VISIBLE);
+        focusPosItem(focusPosition);
+        //dialog.show();
+    }
+
+    void focusPosItem(int position){
+        if(posItemRecycleView!=null){
+            posItemRecycleView.getLayoutManager().scrollToPosition(position);
+        }
     }
 
     @Override
-    public void onMarkerDrag(Marker marker) {
-
-    }
-
-    @Override
-    public void onMarkerDragEnd(Marker marker) {
-        System.out.println("lat == " + marker.getPosition().latitude + "  long == "+ marker.getPosition().longitude);
-        mCurrentLocation.setLatitude(marker.getPosition().latitude);
-        mCurrentLocation.setLongitude(marker.getPosition().longitude);
+    public void onBackPressed() {
+        if(posDialog!=null && posDialog.getVisibility() == View.VISIBLE){
+            posDialog.setVisibility(View.GONE);
+        }else
+        super.onBackPressed();
     }
 }
