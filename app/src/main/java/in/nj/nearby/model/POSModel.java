@@ -9,7 +9,7 @@ import in.nj.nearby.common.interfaces.listeners.PosButtons;
  */
 
 public class POSModel {
-    private String title,address,offers,category;
+    private String title,address,offers,category,distance="~";
     private PosButtons.OnCallClickListener onCallClickListener;
     private PosButtons.OnNavigationClickListener onNavigationClickListener;
     private PosButtons.OnShareClickListener onShareClickListener;
@@ -84,5 +84,13 @@ public class POSModel {
 
     public void setMarker(Marker marker) {
         this.marker = marker;
+    }
+
+    public String getDistance() {
+        return distance;
+    }
+
+    public void setDistance(String distance) {
+        this.distance = distance;
     }
 }

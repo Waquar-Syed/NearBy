@@ -1,6 +1,7 @@
 package in.nj.nearby.common.adapters;
 
 import android.content.Context;
+import android.speech.tts.TextToSpeech;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -9,6 +10,8 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+
+import org.w3c.dom.Text;
 
 import java.util.List;
 
@@ -44,6 +47,7 @@ public class POSItemsListAdapter extends RecyclerView.Adapter<POSItemsListAdapte
         holder.navigate.setOnClickListener(posModel.getOnNavigationClickListener());
         holder.share.setOnClickListener(posModel.getOnShareClickListener());
         holder.call.setOnClickListener(posModel.getOnCallClickListener());
+        holder.distance.setText(posModel.getDistance()+" m");
 
         String catagory = posModel.getCategory();
         if(catagory.toLowerCase().contains("elect")){
@@ -67,7 +71,7 @@ public class POSItemsListAdapter extends RecyclerView.Adapter<POSItemsListAdapte
 
     public class MyViewHolder extends RecyclerView.ViewHolder{
 
-        TextView merchant,address,offers,category;
+        TextView merchant,address,offers,category,distance;
         Button navigate,share,call;
         LinearLayout bg;
 
@@ -77,6 +81,7 @@ public class POSItemsListAdapter extends RecyclerView.Adapter<POSItemsListAdapte
             address = (TextView)view.findViewById(R.id.address);
             offers = (TextView)view.findViewById(R.id.offer);
             category = (TextView)view.findViewById(R.id.category);
+            distance = (TextView) view.findViewById(R.id.distance);
 
             navigate = (Button)view.findViewById(R.id.navigate);
             share= (Button)view.findViewById(R.id.share);

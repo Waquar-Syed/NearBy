@@ -66,6 +66,7 @@ import com.google.gson.Gson;
 import com.google.maps.android.ui.IconGenerator;
 
 import java.text.DateFormat;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -73,6 +74,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 import in.nj.nearby.BuildConfig;
@@ -237,6 +239,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
             }
         });
         posDialog = (View)findViewById(R.id.posDialog);
+        getMerchantList(AppConstants.getCatagories().toArray(new String[AppConstants.getCatagories().size()]));
         //createMarkersDialog(null,0);
     }
 
@@ -415,6 +418,9 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
 
 
         markersOnMap.add(marker);
+
+        posModel.setDistance(new DecimalFormat("0.000").format(getDistance(marker.getPosition()))+"");
+
 
         LatLngBounds.Builder builder = new LatLngBounds.Builder();
         for(Marker m : markersOnMap){
@@ -1085,7 +1091,9 @@ private View posDialog;
         View view = inflater.inflate(R.layout.layout_marker_icon, null);
         TextView tv = (TextView)view.findViewById(R.id.marker_text);
         ImageView iv = (ImageView)view.findViewById(R.id.marker_icon);
-        tv.setText(posModel.getOffers());
+        Random random = new Random();
+        int x = random.nextInt(4)+1;
+        tv.setText(posModel.getTitle()+"\n"+x+"X");
         iv.setBackground(getDrawable(getDrawableForDescription(desc)));
 
         view.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
@@ -1104,5 +1112,14 @@ private View posDialog;
         view.draw(c);
 
         return bitmap;
+    }
+
+    private double getDistance(LatLng latLng){
+        Location location = new Location("markerLocation");
+        location.setLatitude(latLng.latitude);
+        location.setLongitude(latLng.longitude);
+        double distance = AppConstants.getFixedLocation().distanceTo(location);
+        Log.d("Distance",distance+"");
+        return distance;
     }
 }
