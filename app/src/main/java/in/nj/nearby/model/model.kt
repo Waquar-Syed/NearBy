@@ -18,6 +18,7 @@ class POSDetails(
         var STREET_NME : String,
         var DISTRICT_NME : String,
         var CITY_NME : String,
+        var PHONE_NO : String,
         var M_NAME : String
 );
 

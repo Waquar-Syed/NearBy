@@ -90,8 +90,8 @@ import in.nj.nearby.services.ServerCommunication;
  * Created by hp on 30-11-2017.
  */
 
-public class LocationActivity extends AppCompatActivity implements OnMapReadyCallback {
-    private static final String TAG = LocationActivity.class.getSimpleName();
+public class LocationActivity2 extends AppCompatActivity implements OnMapReadyCallback {
+    private static final String TAG = LocationActivity2.class.getSimpleName();
 
     private GoogleMap gMap;
     boolean zoomToLocationOnlyOnce;
@@ -235,13 +235,26 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
             }
         });
         posDialog = (View) findViewById(R.id.posDialog);
-        getMerchantList(AppConstants.getCatagories().toArray(new String[AppConstants.getCatagories().size()]));
+
+        Intent intent = getIntent();
+        String categories = intent.getStringExtra("CATEGORIES");
+        if(categories!=null && categories.length()>0){
+            mSearchTextView.setText(categories);
+            String[] temp = categories.split(",");
+            for(String s : temp){
+                if(s.length()>0){
+                    checkedItems.add(s);
+                }
+            }
+            getMerchantList(checkedItems.toArray(new String[checkedItems.size()]));
+        }else
+            getMerchantList(AppConstants.getCatagories().toArray(new String[AppConstants.getCatagories().size()]));
         //createMarkersDialog(null,0);
     }
 
     private void createDialog() {
         // custom dialog
-        final Dialog dialog = new Dialog(LocationActivity.this);
+        final Dialog dialog = new Dialog(LocationActivity2.this);
         dialog.setContentView(R.layout.dialog_search_items);
         dialog.getWindow().setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT);
         dialog.setTitle("Type preferences");
@@ -336,6 +349,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
         for (POSDetails posDetails : pos.getPos()) {
             POSModel posModel = new POSModel(posDetails.getM_NAME(), posDetails.getOUTER_POSTAL_CODE() + posDetails.getINNER_POSTAL_CODE(),
                     AppConstants.getOffer(), posDetails.getMID());
+
             posModel.setOnCallClickListener(new PosButtons.OnCallClickListener() {
                 @Override
                 public void onClick(View view) {
@@ -354,6 +368,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
                     Log.d("shareCLICK", "hanji");
                 }
             });
+            posModel.setPhoneNumber(posDetails.getPHONE_NO());
             posModelList.add(posModel);
             getLatLngForAddress(posDetails.getOUTER_POSTAL_CODE() + posDetails.getINNER_POSTAL_CODE(), posDetails.getM_NAME(), posDetails.getMCC_DSC(), posModel);
         }
@@ -535,10 +550,21 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
 
     private void setCallButton(Marker marker) {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
-            Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + "8983504649"));
+            String number = "";
+            try {
+                for (POSModel posModel : posModelList) {
+                    if (posModel.getMarker().equals(marker)) {
+                        number = posModel.getPhoneNumber();
+                    }
+                }
+            }catch (NullPointerException e){
+                Log.d("exception",e.toString());
+            }
+            number = number.length()>0?number:"9555308310";
+            Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + number));
             startActivity(intent);
         } else {
-            ActivityCompat.requestPermissions(LocationActivity.this,
+            ActivityCompat.requestPermissions(LocationActivity2.this,
                     new String[]{Manifest.permission.CALL_PHONE},
                     REQUEST_PERMISSIONS_REQUEST_CODE);
         }
@@ -624,8 +650,8 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
     }
 
     /**
-     * Uses a {@link com.google.android.gms.location.LocationSettingsRequest.Builder} to build
-     * a {@link com.google.android.gms.location.LocationSettingsRequest} that is used for checking
+     * Uses a {@link LocationSettingsRequest.Builder} to build
+     * a {@link LocationSettingsRequest} that is used for checking
      * if a device has the needed location settings.
      */
     private void buildLocationSettingsRequest() {
@@ -689,7 +715,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
                         Log.i(TAG, "All location settings are satisfied.");
 
                         //noinspection MissingPermission
-                        if (ActivityCompat.checkSelfPermission(LocationActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(LocationActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                        if (ActivityCompat.checkSelfPermission(LocationActivity2.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(LocationActivity2.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                             // TODO: Consider calling
                             //    ActivityCompat#requestPermissions
                             // here to request the missing permissions, and then overriding
@@ -717,7 +743,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
                                     // Show the dialog by calling startResolutionForResult(), and check the
                                     // result in onActivityResult().
                                     ResolvableApiException rae = (ResolvableApiException) e;
-                                    rae.startResolutionForResult(LocationActivity.this, REQUEST_CHECK_SETTINGS);
+                                    rae.startResolutionForResult(LocationActivity2.this, REQUEST_CHECK_SETTINGS);
                                 } catch (IntentSender.SendIntentException sie) {
                                     Log.i(TAG, "PendingIntent unable to execute request.");
                                 }
@@ -726,7 +752,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
                                 String errorMessage = "Location settings are inadequate, and cannot be " +
                                         "fixed here. Fix in Settings.";
                                 Log.e(TAG, errorMessage);
-                                Toast.makeText(LocationActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+                                Toast.makeText(LocationActivity2.this, errorMessage, Toast.LENGTH_LONG).show();
                                 mRequestingLocationUpdates = false;
                         }
 
@@ -889,7 +915,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
                         @Override
                         public void onClick(View view) {
                             // Request permission
-                            ActivityCompat.requestPermissions(LocationActivity.this,
+                            ActivityCompat.requestPermissions(LocationActivity2.this,
                                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.CALL_PHONE},
                                     REQUEST_PERMISSIONS_REQUEST_CODE);
                         }
@@ -899,7 +925,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
             // Request permission. It's possible this can be auto answered if device policy
             // sets the permission in a given state or the user denied the permission
             // previously and checked "Never ask again".
-            ActivityCompat.requestPermissions(LocationActivity.this,
+            ActivityCompat.requestPermissions(LocationActivity2.this,
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.CALL_PHONE},
                     REQUEST_PERMISSIONS_REQUEST_CODE);
         }

@@ -9,11 +9,13 @@ import in.nj.nearby.common.interfaces.listeners.PosButtons;
  */
 
 public class POSModel {
-    private String title,address,offers,category,distance="~";
+    private String title,address,offers,category,distance="~",phoneNumber="9555308310";
+    private double lat,lon;
     private PosButtons.OnCallClickListener onCallClickListener;
     private PosButtons.OnNavigationClickListener onNavigationClickListener;
     private PosButtons.OnShareClickListener onShareClickListener;
     private Marker marker;
+    int rewardMultiplier;
 
     public POSModel(String title, String address, String offers, String category) {
         this.title = title;
@@ -92,5 +94,37 @@ public class POSModel {
 
     public void setDistance(String distance) {
         this.distance = distance;
+    }
+
+    public int getRewardMultiplier() {
+        return rewardMultiplier;
+    }
+
+    public void setRewardMultiplier(int rewardMultiplier) {
+        this.rewardMultiplier = rewardMultiplier;
+    }
+
+    public double getLat() {
+        return lat;
+    }
+
+    public void setLat(double lat) {
+        this.lat = lat;
+    }
+
+    public double getLon() {
+        return lon;
+    }
+
+    public void setLon(double lon) {
+        this.lon = lon;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
     }
 }

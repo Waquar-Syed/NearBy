@@ -36,6 +36,8 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
+import in.nj.nearby.views.OffersListActivity;
+
 import static android.Manifest.permission.READ_CONTACTS;
 /**
  * Created by rishikapriya on 08/11/17.
