@@ -1,0 +1,3697 @@
+Index: app/src/main/java/in/nj/nearby/LoginActivity.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/in/nj/nearby/LoginActivity.java	(revision b7c6a4305b123369907fd04e3a509ec25530c4e7)
++++ app/src/main/java/in/nj/nearby/LoginActivity.java	(revision )
+@@ -36,6 +36,8 @@
+ import java.util.Calendar;
+ import java.util.List;
+ 
++import in.nj.nearby.views.OffersListActivity;
++
+ import static android.Manifest.permission.READ_CONTACTS;
+ /**
+  * Created by rishikapriya on 08/11/17.
+Index: app/src/main/java/in/nj/nearby/views/BestOffersActivity.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/in/nj/nearby/views/BestOffersActivity.java	(revision )
++++ app/src/main/java/in/nj/nearby/views/BestOffersActivity.java	(revision )
+@@ -0,0 +1,415 @@
++package in.nj.nearby.views;
++
++import android.Manifest;
++import android.app.Dialog;
++import android.content.DialogInterface;
++import android.content.Intent;
++import android.content.pm.PackageManager;
++import android.location.Location;
++import android.net.Uri;
++import android.os.Bundle;
++import android.support.annotation.Nullable;
++import android.support.design.widget.FloatingActionButton;
++import android.support.v4.app.ActivityCompat;
++import android.support.v7.app.AppCompatActivity;
++import android.support.v7.widget.DefaultItemAnimator;
++import android.support.v7.widget.LinearLayoutManager;
++import android.support.v7.widget.RecyclerView;
++import android.text.Editable;
++import android.text.TextWatcher;
++import android.util.Log;
++import android.view.LayoutInflater;
++import android.view.View;
++import android.view.WindowManager;
++import android.widget.Button;
++import android.widget.EditText;
++import android.widget.ImageButton;
++import android.widget.LinearLayout;
++import android.widget.PopupWindow;
++import android.widget.TextView;
++
++import com.android.volley.VolleyError;
++import com.google.gson.Gson;
++
++import java.text.DecimalFormat;
++import java.util.ArrayList;
++import java.util.Collections;
++import java.util.HashMap;
++import java.util.HashSet;
++import java.util.List;
++import java.util.Map;
++import java.util.Random;
++import java.util.Set;
++
++import in.nj.nearby.R;
++import in.nj.nearby.common.AppConstants;
++import in.nj.nearby.common.PosOffersComparator;
++import in.nj.nearby.common.adapters.POSItemsListAdapter2;
++import in.nj.nearby.common.adapters.SearchListAdapter;
++import in.nj.nearby.common.interfaces.listeners.ServiceResponseListener;
++import in.nj.nearby.model.Coordinates;
++import in.nj.nearby.model.POS;
++import in.nj.nearby.model.POSDetails;
++import in.nj.nearby.model.POSModel;
++import in.nj.nearby.services.ServerCommunication;
++
++/**
++ * Created by nitesh on 09-12-2017.
++ */
++
++public class BestOffersActivity extends AppCompatActivity {
++
++    RecyclerView recyclerView;
++    FloatingActionButton fab;
++
++    List<POSModel> posModels = new ArrayList<>();
++    POSItemsListAdapter2 adapter2;
++
++    String searchText;
++
++    @Override
++    protected void onCreate(@Nullable Bundle savedInstanceState) {
++        super.onCreate(savedInstanceState);
++        setContentView(R.layout.activity_offerslist);
++        intializeViews();
++        updateView();
++    }
++
++    private void intializeViews() {
++        recyclerView = findViewById(R.id.recyclerview);
++        fab = findViewById(R.id.fab);
++        fab.setVisibility(View.GONE);
++    }
++
++
++    private void updateView() {
++
++        getMerchantList(AppConstants.getCatagories().toArray(new String[AppConstants.getCatagories().size()]));
++        //getPosData();
++
++        //populatePOSList(posModels);
++
++        fab.setOnClickListener(new View.OnClickListener() {
++            @Override
++            public void onClick(View view) {
++                showMenuPopup(view,view.getLeft()-(view.getWidth()*2),
++                        (view.getHeight()*2));
++            }
++        });
++    }
++
++    private List<POSModel> getPosData() {
++        POSModel posModel1 = new POSModel("T1","Address1", AppConstants.getOffer(),"Dining");
++        posModel1.setRewardMultiplier(2);
++
++        POSModel posModel2 = new POSModel("T2","Address2", AppConstants.getOffer(),"Dining");
++        posModel2.setRewardMultiplier(2);
++        POSModel posModel3 = new POSModel("T3","Address3", AppConstants.getOffer(),"Travel");
++        posModel3.setRewardMultiplier(3);
++        POSModel posModel4 = new POSModel("T4","Address4", AppConstants.getOffer(),"Electronics");
++        posModel4.setRewardMultiplier(4);
++
++        POSModel posModel5 = new POSModel("T2","Address2", AppConstants.getOffer(),"Dining");
++        posModel2.setRewardMultiplier(2);
++        POSModel posModel6 = new POSModel("T3","Address3", AppConstants.getOffer(),"Travel");
++        posModel3.setRewardMultiplier(3);
++        POSModel posModel7 = new POSModel("T4","Address4", AppConstants.getOffer(),"Electronics");
++        posModel4.setRewardMultiplier(4);
++
++        posModels.add(posModel1);
++        posModels.add(posModel2);
++        posModels.add(posModel3);
++        posModels.add(posModel4);
++        posModels.add(posModel5);
++        posModels.add(posModel6);
++        posModels.add(posModel7);
++        Collections.sort(posModels,new PosOffersComparator());
++        return posModels;
++    }
++
++    void populatePOSList(final List<POSModel> posModels){
++        RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(getApplicationContext(),LinearLayoutManager.VERTICAL,false);
++        recyclerView.setLayoutManager(layoutManager);
++        recyclerView.setItemAnimator(new DefaultItemAnimator());
++        adapter2 = new POSItemsListAdapter2(posModels,this);
++        adapter2.setOnClickListener(new OffersListActivity.OnClickListener() {
++            @Override
++            public void onClick(View v, int position) {
++               // Toast.makeText(OffersListActivity.this,"Pos: "+position+"",Toast.LENGTH_SHORT).show();
++                //startNavigation(posModels.get(position));
++                showDialog(posModels.get(position));
++            }
++        });
++        recyclerView.setAdapter(adapter2);
++    }
++
++    SearchListAdapter mAdapter;
++    final Set<String> checkedItems = new HashSet<>();
++
++    private void createDialog() {
++// custom dialog
++        final Dialog dialog = new Dialog(BestOffersActivity.this);
++        dialog.setContentView(R.layout.dialog_search_items);
++        dialog.getWindow().setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT);
++        dialog.setTitle("Type preferences");
++
++        RecyclerView recyclerView = (RecyclerView) dialog.findViewById(R.id.recyclerview);
++        EditText   mSearchEditText = (EditText) dialog.findViewById(R.id.search_edittext);
++
++        List<String> items = AppConstants.getCatagories();
++
++        mAdapter = new SearchListAdapter(items, checkedItems);
++        RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(getApplicationContext());
++        recyclerView.setLayoutManager(layoutManager);
++        recyclerView.setItemAnimator(new DefaultItemAnimator());
++        recyclerView.setAdapter(mAdapter);
++
++        mSearchEditText.addTextChangedListener(new TextWatcher() {
++            @Override
++            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
++
++            }
++
++            @Override
++            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
++                if (mAdapter != null) {
++                    mAdapter.getFilter().filter(charSequence.toString().trim());
++                }
++            }
++
++            @Override
++            public void afterTextChanged(Editable editable) {
++
++            }
++        });
++
++        dialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
++            @Override
++            public void onCancel(DialogInterface dialogInterface) {
++                Log.d("Checked-ITEMS:", checkedItems.toString());
++                searchText = "";
++                if(checkedItems.size()!=0) {
++                    List<POSModel> temp = new ArrayList<>();
++                    for (POSModel posModel : posModels) {
++                        for (String s : checkedItems) {
++                            if (s.equals(posModel.getCategory())) {
++                                temp.add(posModel);
++                                break;
++                            }
++                        }
++                    }
++                    for (String s : checkedItems) {
++                        if (checkedItems.size() < 1) {
++                            searchText = s;
++                        } else
++                            searchText += "," + s;
++                    }
++
++                    populatePOSList(temp);
++                }else populatePOSList(posModels);
++                //TODO:
++
++                //CAll api , get marker and then call set markers on the map,
++
++
++                //setMarkersOnMap(latLng.getResults().get(0).getFormatted_address(), latLng.getResults().get(0).getGeometry().getLocation());
++            }
++        });
++
++        dialog.show();
++    }
++
++    private void getMerchantList(String[] type) {
++        Map<String, String> parameter = new HashMap<>();
++        int i = 1;
++        for (String types : type) {
++            parameter.put("type" + (i++), types);
++        }
++        ServerCommunication.getmInstance().addJSONGetRequest(AppConstants.GET_POS_URL, parameter, null, new ServiceResponseListener() {
++            @Override
++            public void onErrorResponse(VolleyError error) {
++                System.out.println("No Response");
++            }
++
++            @Override
++            public void onResponse(Object response) {
++                Log.d(BestOffersActivity.this.getLocalClassName() + ":RESPONSE:", response.toString());
++                Gson gson = new Gson();
++                POS pos = gson.fromJson(response.toString(), POS.class);
++                posModels = new ArrayList<>();
++                for (POSDetails posDetails : pos.getPos()) {
++                    POSModel posModel = new POSModel(posDetails.getM_NAME(), "",
++                            AppConstants.getOffer(), posDetails.getMCC_DSC());
++                    Log.d("Catagory",posModel.getCategory());
++                    posModel.setRewardMultiplier(new Random().nextInt(4)+1);
++                    posModels.add(posModel);
++                    getLatLngForAddress(posDetails.getOUTER_POSTAL_CODE() + posDetails.getINNER_POSTAL_CODE(),posModel);
++                }
++                Collections.sort(posModels,new PosOffersComparator());
++                populatePOSList(posModels);
++            }
++        });
++    }
++
++    private void getLatLngForAddress(String address, final POSModel posModel) {
++        final Map<String, String> parameter = new HashMap<>();
++        parameter.put("address", address);
++        parameter.put("key", "AIzaSyCWcjr8FbpiGxerhFjKRWJH0j6LEl9A4OU");
++
++
++        ServerCommunication.getmInstance().addJSONGetRequest(AppConstants.GET_ADDRESS_URL, parameter, null, new ServiceResponseListener() {
++            @Override
++            public void onErrorResponse(VolleyError error) {
++
++            }
++
++            @Override
++            public void onResponse(Object response) {
++                Gson gson = new Gson();
++
++                Coordinates latLng = gson.fromJson(response.toString(), Coordinates.class);
++                String address = latLng.getResults().get(0).getFormatted_address();
++                posModel.setAddress(address);
++                posModel.setLat(latLng.getResults().get(0).getGeometry().getLocation().getLat());
++                posModel.setLon(latLng.getResults().get(0).getGeometry().getLocation().getLng());
++                Location posLocation = new Location("posLocaiton");
++                posLocation.setLatitude(posModel.getLat());
++                posLocation.setLongitude(posModel.getLon());
++                posModel.setDistance(new DecimalFormat("0.000").format(AppConstants.calculateDistance(AppConstants.getFixedLocation(),posLocation))+"");
++                adapter2.notifyDataSetChanged();
++                //setMarkersOnMap(latLng.getResults().get(0).getFormatted_address(), latLng.getResults().get(0).getGeometry().getLocation(), mName, desc, posModel);
++            }
++        });
++    }
++
++    private void startNavigation(POSModel posModel) {
++        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://maps.google.com/maps?saddr=" + "51.461561,-0.210521" + "&daddr=" + posModel.getLat()+ "," + posModel.getLon()));
++        startActivity(intent);
++    }
++
++    private void setShareButton(POSModel posModel) {
++        String message = "http://maps.google.com/maps?q=" + posModel.getLat() + "," + posModel.getLon();
++        Intent sendIntent = new Intent();
++        sendIntent.setAction(Intent.ACTION_SEND);
++        sendIntent.putExtra(Intent.EXTRA_TEXT, "See you at: " + message);
++        sendIntent.setType("text/plain");
++        startActivity(Intent.createChooser(sendIntent, "Share Through"));
++    }
++
++    private static final int REQUEST_PERMISSIONS_REQUEST_CODE = 34;
++
++    private void setCallButton(POSModel posModel) {
++        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
++            Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + "9555308310"));
++            startActivity(intent);
++        } else {
++            ActivityCompat.requestPermissions(BestOffersActivity.this,
++                    new String[]{Manifest.permission.CALL_PHONE},
++                    REQUEST_PERMISSIONS_REQUEST_CODE);
++        }
++    }
++
++    public interface OnClickListener{
++        void onClick(View v, int position);
++    }
++
++    void showDialog(final POSModel posModel){
++        final Dialog view = new Dialog(BestOffersActivity.this);
++        view.setContentView(R.layout.layout_pos_items);
++        view.getWindow().setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
++
++        TextView merchant,address,offers,category,distance;
++        Button navigate,share,call;
++        LinearLayout bg;
++
++        merchant = (TextView)view.findViewById(R.id.merchant);
++        address = (TextView)view.findViewById(R.id.address);
++        offers = (TextView)view.findViewById(R.id.offer);
++        category = (TextView)view.findViewById(R.id.category);
++        distance = (TextView) view.findViewById(R.id.distance);
++
++        navigate = (Button)view.findViewById(R.id.navigate);
++        share= (Button)view.findViewById(R.id.share);
++        call = (Button)view.findViewById(R.id.call);
++
++        bg = (LinearLayout)view.findViewById(R.id.bg_image);
++
++        merchant.setText(posModel.getTitle());
++        category.setText(posModel.getCategory());
++        address.setText(posModel.getAddress());
++        offers.setText(posModel.getOffers());
++        navigate.setOnClickListener(new View.OnClickListener() {
++            @Override
++            public void onClick(View view) {
++                startNavigation(posModel);
++            }
++        });
++        share.setOnClickListener(new View.OnClickListener() {
++            @Override
++            public void onClick(View view) {
++                setShareButton(posModel);
++            }
++        });
++        call.setOnClickListener(new View.OnClickListener() {
++            @Override
++            public void onClick(View view) {
++                setCallButton(posModel);
++            }
++        });
++        distance.setText(posModel.getDistance()+" m");
++
++        String catagory = posModel.getCategory();
++        if(catagory.toLowerCase().contains("elect")){
++            bg.setBackground(getResources().getDrawable(R.drawable.electronics));
++        }else
++        if(catagory.toLowerCase().contains("trav")){
++            bg.setBackground(getResources().getDrawable(R.drawable.travle));
++        }else
++        if(catagory.toLowerCase().contains("clot")){
++            bg.setBackground(getResources().getDrawable(R.drawable.cloths));
++        }else
++        if(catagory.toLowerCase().contains("din")){
++            bg.setBackground(getResources().getDrawable(R.drawable.dining));
++        }
++        view.show();
++    }
++
++    void showMenuPopup(View v,int x,int y){
++        final PopupWindow popupWindow = new PopupWindow(this);
++
++        LayoutInflater inflater = (LayoutInflater)getSystemService(LAYOUT_INFLATER_SERVICE);
++        View view = inflater.inflate(R.layout.popup_menu_items,null);
++
++        ImageButton showMap,showfilter;
++        showMap = view.findViewById(R.id.showOnMap);
++        showfilter = view.findViewById(R.id.showFilter);
++        showMap.setOnClickListener(new View.OnClickListener() {
++            @Override
++            public void onClick(View view) {
++                Intent in = new Intent(BestOffersActivity.this,LocationActivity2.class);
++                if(searchText.trim().length()==0){
++                    for(String s : AppConstants.getCatagories()){
++                        searchText+= s+",";
++                    }
++                    searchText = searchText.substring(0,searchText.length()-1);
++                }
++                Log.d("SearchText",searchText);
++                in.putExtra("CATEGORIES",searchText);
++
++                startActivity(in);
++            }
++        });
++
++        showfilter.setOnClickListener(new View.OnClickListener() {
++            @Override
++            public void onClick(View view) {
++                createDialog();
++            }
++        });
++
++        popupWindow.setFocusable(true);
++        popupWindow.setContentView(view);
++        popupWindow.showAsDropDown(v,x,-y);
++    }
++
++}
+Index: app/src/main/res/layout/activity_main.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/res/layout/activity_main.xml	(revision b7c6a4305b123369907fd04e3a509ec25530c4e7)
++++ app/src/main/res/layout/activity_main.xml	(revision )
+@@ -1,18 +1,300 @@
+ <?xml version="1.0" encoding="utf-8"?>
+-<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
++<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
++    android:layout_height="match_parent"
++    android:layout_width="match_parent"
++    android:orientation="vertical"
+     xmlns:app="http://schemas.android.com/apk/res-auto"
+-    xmlns:tools="http://schemas.android.com/tools"
+-    android:layout_width="match_parent"
+-    android:layout_height="match_parent"
+-    tools:context="in.nj.nearby.MainActivity">
++    xmlns:tools="http://schemas.android.com/tools">
++    <LinearLayout
++        android:layout_weight="1"
++        android:layout_width="match_parent"
++        android:layout_height="match_parent"
++        android:orientation="vertical"
++        tools:context="in.nj.nearby.MainActivity">
+ 
+-    <TextView
++        <LinearLayout
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_margin="5dp"
++            android:padding="5dp">
++
++            <TextView
++                android:layout_width="match_parent"
++                android:layout_height="wrap_content"
++                android:text="Your Accounts"
++                android:gravity="center"
++                android:textAppearance="?android:attr/textAppearanceLarge"/>
++
++        </LinearLayout>
++
++        <LinearLayout
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_margin="5dp"
++            android:orientation="vertical"
++            android:padding="@dimen/dimen_5dp">
++
++
++            <LinearLayout
++                android:layout_width="match_parent"
++                android:layout_height="wrap_content"
++                android:orientation="horizontal">
++
++                <TextView
++                    android:layout_width="match_parent"
++                    android:layout_height="wrap_content"
++                    android:layout_weight="1"
++                    android:text="The Barclays Bank"
++                    android:textAppearance="?android:attr/textAppearanceMedium"
++                    android:textColor="@color/colorPrimary" />
++
++                <TextView
++                    android:layout_width="match_parent"
++                    android:layout_height="wrap_content"
++                    android:layout_weight="1"
++                    android:gravity="end"
++                    android:text="$151.22"
++                    android:textColor="#000" />
++
++
++            </LinearLayout>
++
++            <LinearLayout
++                android:layout_width="match_parent"
++                android:layout_height="wrap_content"
++                android:orientation="horizontal">
++
++                <TextView
++                    android:layout_width="match_parent"
++                    android:layout_height="wrap_content"
++                    android:layout_weight="1"
++                    android:text="29-00-00 80573302" />
++
++                <TextView
++                    android:layout_width="match_parent"
++                    android:layout_height="wrap_content"
++                    android:layout_weight="1"
++                    android:gravity="end"
++                    android:text="Available balance" />
++
++
++            </LinearLayout>
++
++        </LinearLayout>
++        <LinearLayout
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_margin="5dp"
++            android:orientation="vertical"
++            android:padding="@dimen/dimen_5dp">
++
++
++            <LinearLayout
++                android:layout_width="match_parent"
++                android:layout_height="wrap_content"
++                android:orientation="horizontal">
++
++                <TextView
++                    android:layout_width="match_parent"
++                    android:layout_height="wrap_content"
++                    android:layout_weight="1"
++                    android:text="EveryDay Saver"
++                    android:textAppearance="?android:attr/textAppearanceMedium"
++                    android:textColor="@color/colorPrimary" />
++
++                <TextView
++                    android:layout_width="match_parent"
++                    android:layout_height="wrap_content"
++                    android:layout_weight="1"
++                    android:gravity="end"
++                    android:text="$5.00"
++                    android:textColor="#000" />
++
++
++            </LinearLayout>
++
++            <LinearLayout
++                android:layout_width="match_parent"
++                android:layout_height="wrap_content"
++                android:orientation="horizontal">
++
++                <TextView
++                    android:layout_width="match_parent"
++                    android:layout_height="wrap_content"
++                    android:layout_weight="1"
++                    android:text="20-16-56 40696556" />
++
++                <TextView
++                    android:layout_width="match_parent"
++                    android:layout_height="wrap_content"
++                    android:layout_weight="1"
++                    android:gravity="end"
++                    android:text="Available balance" />
++
++
++            </LinearLayout>
++
++        </LinearLayout>
++        <LinearLayout
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_margin="5dp"
++            android:orientation="vertical"
++            android:padding="@dimen/dimen_5dp">
++
++
++            <LinearLayout
++                android:layout_width="match_parent"
++                android:layout_height="wrap_content"
++                android:orientation="horizontal">
++
++                <TextView
++                    android:layout_width="match_parent"
++                    android:layout_height="wrap_content"
++                    android:layout_weight="1"
++                    android:text="The Barclays Bank"
++                    android:textAppearance="?android:attr/textAppearanceMedium"
++                    android:textColor="@color/colorPrimary" />
++
++                <TextView
++                    android:layout_width="match_parent"
++                    android:layout_height="wrap_content"
++                    android:layout_weight="1"
++                    android:gravity="end"
++                    android:text="$151.22"
++                    android:textColor="#000" />
++
++
++            </LinearLayout>
++
++            <LinearLayout
++                android:layout_width="match_parent"
++                android:layout_height="wrap_content"
++                android:orientation="horizontal">
++
++                <TextView
++                    android:layout_width="match_parent"
++                    android:layout_height="wrap_content"
++                    android:layout_weight="1"
++                    android:text="29-00-00 80573302" />
++
++                <TextView
++                    android:layout_width="match_parent"
++                    android:layout_height="wrap_content"
++                    android:layout_weight="1"
++                    android:gravity="end"
++                    android:text="Available balance" />
++
++
++            </LinearLayout>
++
++        </LinearLayout>
++
++
++
++    </LinearLayout>
++<LinearLayout
++    android:layout_width="match_parent"
++    android:layout_height="wrap_content"
++    android:orientation="horizontal"
++    android:padding="6dp"
++    android:layout_alignParentBottom="true"
++    android:background="@color/colorPrimary">
++    <LinearLayout
+         android:layout_width="wrap_content"
+         android:layout_height="wrap_content"
+-        android:text="Hello World!"
+-        app:layout_constraintBottom_toBottomOf="parent"
+-        app:layout_constraintLeft_toLeftOf="parent"
+-        app:layout_constraintRight_toRightOf="parent"
+-        app:layout_constraintTop_toTopOf="parent" />
+-
+-</android.support.constraint.ConstraintLayout>
++        android:layout_weight="1"
++        android:orientation="vertical">
++        <Button
++            android:layout_width="32dp"
++            android:background="@drawable/home"
++            android:layout_weight="1"
++            android:layout_gravity="center"
++            android:layout_height="32dp" />
++        <TextView
++            android:layout_width="wrap_content"
++            android:layout_height="wrap_content"
++            android:text="accounts"
++            android:textColor="#fff"
++            android:layout_gravity="center"
++            android:gravity="center"/>
++    </LinearLayout>
++    <LinearLayout
++        android:layout_width="wrap_content"
++        android:layout_height="wrap_content"
++        android:layout_weight="1"
++        android:orientation="vertical">
++        <Button
++            android:layout_width="32dp"
++            android:background="@drawable/statement"
++            android:layout_weight="1"
++            android:layout_gravity="center"
++            android:layout_height="32dp" />
++        <TextView
++            android:layout_width="wrap_content"
++            android:layout_height="wrap_content"
++            android:text="statement"
++            android:textColor="#fff"
++            android:layout_gravity="center"
++            android:gravity="center"/>
++    </LinearLayout>
++    <LinearLayout
++        android:layout_width="wrap_content"
++        android:layout_height="wrap_content"
++        android:layout_weight="1"
++        android:orientation="vertical">
++        <Button
++            android:layout_width="32dp"
++            android:background="@drawable/transfer"
++            android:layout_weight="1"
++            android:layout_gravity="center"
++            android:layout_height="32dp" />
++        <TextView
++            android:layout_width="wrap_content"
++            android:layout_height="wrap_content"
++            android:text="Transfer funds"
++            android:textColor="#fff"
++            android:layout_gravity="center"
++            android:gravity="center"/>
++    </LinearLayout>
++    <LinearLayout
++        android:layout_width="wrap_content"
++        android:layout_height="wrap_content"
++        android:layout_weight="1"
++        android:orientation="vertical">
++        <Button
++            android:layout_width="32dp"
++            android:background="@drawable/help"
++            android:layout_weight="1"
++            android:layout_gravity="center"
++            android:layout_height="32dp" />
++        <TextView
++            android:layout_width="wrap_content"
++            android:layout_height="wrap_content"
++            android:text="Help"
++            android:textColor="#fff"
++            android:layout_gravity="center"
++            android:gravity="center"/>
++    </LinearLayout>
++    <LinearLayout
++        android:layout_width="wrap_content"
++        android:layout_height="wrap_content"
++        android:layout_weight="1"
++        android:orientation="vertical">
++        <Button
++            android:layout_width="32dp"
++            android:id="@+id/nearBy"
++            android:background="@drawable/nearby"
++            android:layout_weight="1"
++            android:layout_gravity="center"
++            android:layout_height="32dp" />
++        <TextView
++            android:layout_width="wrap_content"
++            android:layout_height="wrap_content"
++            android:text="NearBy"
++            android:textColor="#fff"
++            android:layout_gravity="center"
++            android:gravity="center"/>
++    </LinearLayout>
++</LinearLayout>
++</LinearLayout>
+Index: app/src/main/java/in/nj/nearby/views/LocationActivity2.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/in/nj/nearby/views/LocationActivity2.java	(revision )
++++ app/src/main/java/in/nj/nearby/views/LocationActivity2.java	(revision )
+@@ -0,0 +1,1147 @@
++package in.nj.nearby.views;
++
++import android.Manifest;
++import android.app.Activity;
++import android.app.Dialog;
++import android.content.Context;
++import android.content.DialogInterface;
++import android.content.Intent;
++import android.content.IntentSender;
++import android.content.pm.PackageManager;
++import android.graphics.Bitmap;
++import android.graphics.Canvas;
++import android.location.Location;
++import android.net.Uri;
++import android.os.Bundle;
++import android.os.Looper;
++import android.provider.Settings;
++import android.support.annotation.NonNull;
++import android.support.v4.app.ActivityCompat;
++import android.support.v7.app.AppCompatActivity;
++import android.support.v7.widget.DefaultItemAnimator;
++import android.support.v7.widget.LinearLayoutManager;
++import android.support.v7.widget.RecyclerView;
++import android.text.Editable;
++import android.text.TextWatcher;
++import android.util.Log;
++import android.view.LayoutInflater;
++import android.view.View;
++import android.view.WindowManager;
++import android.widget.Button;
++import android.widget.EditText;
++import android.widget.ImageView;
++import android.widget.TextView;
++import android.widget.Toast;
++
++import com.android.volley.VolleyError;
++import com.google.android.gms.common.api.ApiException;
++import com.google.android.gms.common.api.ResolvableApiException;
++import com.google.android.gms.location.FusedLocationProviderClient;
++import com.google.android.gms.location.LocationCallback;
++import com.google.android.gms.location.LocationRequest;
++import com.google.android.gms.location.LocationResult;
++import com.google.android.gms.location.LocationServices;
++import com.google.android.gms.location.LocationSettingsRequest;
++import com.google.android.gms.location.LocationSettingsResponse;
++import com.google.android.gms.location.LocationSettingsStatusCodes;
++import com.google.android.gms.location.SettingsClient;
++import com.google.android.gms.maps.CameraUpdate;
++import com.google.android.gms.maps.CameraUpdateFactory;
++import com.google.android.gms.maps.GoogleMap;
++import com.google.android.gms.maps.OnMapReadyCallback;
++import com.google.android.gms.maps.SupportMapFragment;
++import com.google.android.gms.maps.model.BitmapDescriptorFactory;
++import com.google.android.gms.maps.model.LatLng;
++import com.google.android.gms.maps.model.LatLngBounds;
++import com.google.android.gms.maps.model.Marker;
++import com.google.android.gms.maps.model.MarkerOptions;
++import com.google.android.gms.tasks.OnCompleteListener;
++import com.google.android.gms.tasks.OnFailureListener;
++import com.google.android.gms.tasks.OnSuccessListener;
++import com.google.android.gms.tasks.Task;
++import com.google.gson.Gson;
++
++import java.text.DateFormat;
++import java.text.DecimalFormat;
++import java.util.ArrayList;
++import java.util.Date;
++import java.util.HashMap;
++import java.util.HashSet;
++import java.util.List;
++import java.util.Locale;
++import java.util.Map;
++import java.util.Random;
++import java.util.Set;
++
++import in.nj.nearby.BuildConfig;
++import in.nj.nearby.R;
++import in.nj.nearby.common.AppConstants;
++import in.nj.nearby.common.adapters.POSItemsListAdapter;
++import in.nj.nearby.common.adapters.SearchListAdapter;
++import in.nj.nearby.common.interfaces.listeners.PosButtons;
++import in.nj.nearby.common.interfaces.listeners.ServiceResponseListener;
++import in.nj.nearby.model.Coordinates;
++import in.nj.nearby.model.POS;
++import in.nj.nearby.model.POSDetails;
++import in.nj.nearby.model.POSModel;
++import in.nj.nearby.services.ServerCommunication;
++
++/**
++ * Created by hp on 30-11-2017.
++ */
++
++public class LocationActivity2 extends AppCompatActivity implements OnMapReadyCallback {
++    private static final String TAG = LocationActivity2.class.getSimpleName();
++
++    private GoogleMap gMap;
++    boolean zoomToLocationOnlyOnce;
++
++    /**
++     * Code used in requesting runtime permissions.
++     */
++    private static final int REQUEST_PERMISSIONS_REQUEST_CODE = 34;
++
++    /**
++     * Constant used in the location settings dialog.
++     */
++    private static final int REQUEST_CHECK_SETTINGS = 0x1;
++
++    /**
++     * The desired interval for location updates. Inexact. Updates may be more or less frequent.
++     */
++    private static final long UPDATE_INTERVAL_IN_MILLISECONDS = 10000;
++
++    /**
++     * The fastest rate for active location updates. Exact. Updates will never be more frequent
++     * than this value.
++     */
++    private static final long FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS =
++            UPDATE_INTERVAL_IN_MILLISECONDS / 2;
++
++    // Keys for storing activity state in the Bundle.
++    private final static String KEY_REQUESTING_LOCATION_UPDATES = "requesting-location-updates";
++    private final static String KEY_LOCATION = "location";
++    private final static String KEY_LAST_UPDATED_TIME_STRING = "last-updated-time-string";
++
++    /**
++     * Provides access to the Fused Location Provider API.
++     */
++    private FusedLocationProviderClient mFusedLocationClient;
++
++    /**
++     * Provides access to the Location Settings API.
++     */
++    private SettingsClient mSettingsClient;
++
++    /**
++     * Stores parameters for requests to the FusedLocationProviderApi.
++     */
++    private LocationRequest mLocationRequest;
++
++    /**
++     * Stores the types of location services the client is interested in using. Used for checking
++     * settings to determine if the device has optimal location settings.
++     */
++    private LocationSettingsRequest mLocationSettingsRequest;
++
++    /**
++     * Callback for Location events.
++     */
++    private LocationCallback mLocationCallback;
++
++    /**
++     * Represents a geographical location.
++     */
++    private Location mCurrentLocation;
++
++    private SupportMapFragment map;
++
++
++    // UI Widgets.
++   /* private Button mStartUpdatesButton;
++    private Button mStopUpdatesButton;
++   */
++    //private TextView mLastUpdateTimeTextView;
++    private TextView mLatitudeTextView;
++    private TextView mLongitudeTextView;
++    private TextView mSearchTextView;
++    private EditText mSearchEditText;
++
++    // Labels.
++    private String mLatitudeLabel;
++    private String mLongitudeLabel;
++    //private String mLastUpdateTimeLabel;
++
++    /**
++     * Tracks the status of the location updates request. Value changes when the user presses the
++     * Start Updates and Stop Updates buttons.
++     */
++    private Boolean mRequestingLocationUpdates;
++
++    /**
++     * Time when the location was updated represented as a String.
++     */
++    private String mLastUpdateTime;
++
++    SearchListAdapter mAdapter;
++    final Set<String> checkedItems = new HashSet<>();
++
++    //this is used to store permanent markers on the map
++    Map<String, Marker> markerHashMap = new HashMap<>();
++
++    //this is used to stop temporary markers on the map
++    List<Marker> markersOnMap = new ArrayList<>();
++
++    List<POSModel> posModelList;
++
++
++    @Override
++    public void onCreate(Bundle savedInstanceState) {
++        super.onCreate(savedInstanceState);
++        setContentView(R.layout.activity_map);
++
++        mLatitudeTextView = findViewById(R.id.latitude_text);
++        mLongitudeTextView = findViewById(R.id.longitude_text);
++        mSearchTextView = findViewById(R.id.search);
++
++        // Set labels.
++        mLatitudeLabel = getResources().getString(R.string.latitude_label);
++        mLongitudeLabel = getResources().getString(R.string.longitude_label);
++
++        mRequestingLocationUpdates = false;
++        mLastUpdateTime = "";
++
++        // Update values using data stored in the Bundle.
++        updateValuesFromBundle(savedInstanceState);
++
++        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
++        mSettingsClient = LocationServices.getSettingsClient(this);
++
++        // Kick off the process of building the LocationCallback, LocationRequest, and
++        // LocationSettingsRequest objects.
++        createLocationCallback();
++        createLocationRequest();
++        buildLocationSettingsRequest();
++        startLocationUpdates();
++
++        map = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
++
++        map.getMapAsync(this);
++
++        mSearchTextView.setOnClickListener(new View.OnClickListener() {
++            @Override
++            public void onClick(View view) {
++                createDialog();
++            }
++        });
++        posDialog = (View) findViewById(R.id.posDialog);
++
++        Intent intent = getIntent();
++        String categories = intent.getStringExtra("CATEGORIES");
++        if(categories!=null && categories.length()>0){
++            mSearchTextView.setText(categories);
++            String[] temp = categories.split(",");
++            for(String s : temp){
++                if(s.length()>0){
++                    checkedItems.add(s);
++                }
++            }
++            getMerchantList(checkedItems.toArray(new String[checkedItems.size()]));
++        }else
++            getMerchantList(AppConstants.getCatagories().toArray(new String[AppConstants.getCatagories().size()]));
++        //createMarkersDialog(null,0);
++    }
++
++    private void createDialog() {
++        // custom dialog
++        final Dialog dialog = new Dialog(LocationActivity2.this);
++        dialog.setContentView(R.layout.dialog_search_items);
++        dialog.getWindow().setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT);
++        dialog.setTitle("Type preferences");
++
++        RecyclerView recyclerView = (RecyclerView) dialog.findViewById(R.id.recyclerview);
++        mSearchEditText = (EditText) dialog.findViewById(R.id.search_edittext);
++
++        List<String> items = AppConstants.getCatagories();
++
++        mAdapter = new SearchListAdapter(items, checkedItems);
++        RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(getApplicationContext());
++        recyclerView.setLayoutManager(layoutManager);
++        recyclerView.setItemAnimator(new DefaultItemAnimator());
++        recyclerView.setAdapter(mAdapter);
++
++        mSearchEditText.addTextChangedListener(new TextWatcher() {
++            @Override
++            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
++
++            }
++
++            @Override
++            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
++                if (mAdapter != null) {
++                    mAdapter.getFilter().filter(charSequence.toString().trim());
++                }
++            }
++
++            @Override
++            public void afterTextChanged(Editable editable) {
++
++            }
++        });
++
++        dialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
++            @Override
++            public void onCancel(DialogInterface dialogInterface) {
++                Log.d("Checked-ITEMS:", checkedItems.toString());
++                mSearchTextView.setText("");
++                for (String s : checkedItems) {
++                    if (mSearchTextView.getText().length() < 1) {
++                        mSearchTextView.setText(s);
++                    } else
++                        mSearchTextView.setText(mSearchTextView.getText() + "," + s);
++                }
++                //TODO:
++
++                clearMarkerOnMap();
++
++                getMerchantList(mSearchTextView.getText().toString().split(","));
++
++                //CAll api , get marker and then call set markers on the map,
++
++
++                //setMarkersOnMap(latLng.getResults().get(0).getFormatted_address(), latLng.getResults().get(0).getGeometry().getLocation());
++            }
++        });
++
++        dialog.show();
++    }
++
++    private void clearMarkerOnMap() {
++        for (Marker marker : markersOnMap) {
++            marker.remove();
++        }
++        markersOnMap.clear();
++    }
++
++    private void getMerchantList(String[] type) {
++        Map<String, String> parameter = new HashMap<>();
++        int i = 1;
++        for (String types : type) {
++            parameter.put("type" + (i++), types);
++        }
++        ServerCommunication.getmInstance().addJSONGetRequest(AppConstants.GET_POS_URL, parameter, null, new ServiceResponseListener() {
++            @Override
++            public void onErrorResponse(VolleyError error) {
++                System.out.println("No Response");
++            }
++
++            @Override
++            public void onResponse(Object response) {
++                Gson gson = new Gson();
++                POS pos = gson.fromJson(response.toString(), POS.class);
++                getCoordinatesForPosList(pos);
++            }
++        });
++    }
++
++    private void getCoordinatesForPosList(POS pos) {
++        posModelList = new ArrayList<>();
++        for (POSDetails posDetails : pos.getPos()) {
++            POSModel posModel = new POSModel(posDetails.getM_NAME(), posDetails.getOUTER_POSTAL_CODE() + posDetails.getINNER_POSTAL_CODE(),
++                    AppConstants.getOffer(), posDetails.getMID());
++
++            posModel.setOnCallClickListener(new PosButtons.OnCallClickListener() {
++                @Override
++                public void onClick(View view) {
++                    Log.d("CALLCLICK", "hanji");
++                }
++            });
++            posModel.setOnNavigationClickListener(new PosButtons.OnNavigationClickListener() {
++                @Override
++                public void onClick(View view) {
++                    Log.d("NavigationCLICK", "hanji");
++                }
++            });
++            posModel.setOnShareClickListener(new PosButtons.OnShareClickListener() {
++                @Override
++                public void onClick(View view) {
++                    Log.d("shareCLICK", "hanji");
++                }
++            });
++            posModel.setPhoneNumber(posDetails.getPHONE_NO());
++            posModelList.add(posModel);
++            getLatLngForAddress(posDetails.getOUTER_POSTAL_CODE() + posDetails.getINNER_POSTAL_CODE(), posDetails.getM_NAME(), posDetails.getMCC_DSC(), posModel);
++        }
++    }
++
++    private void getLatLngForAddress(String address, final String mName, final String desc, final POSModel posModel) {
++        final Map<String, String> parameter = new HashMap<>();
++        posModel.setCategory(desc);
++        parameter.put("address", address);
++        parameter.put("key", "AIzaSyCWcjr8FbpiGxerhFjKRWJH0j6LEl9A4OU");
++
++
++        ServerCommunication.getmInstance().addJSONGetRequest(AppConstants.GET_ADDRESS_URL, parameter, getHeaders(), new ServiceResponseListener() {
++            @Override
++            public void onErrorResponse(VolleyError error) {
++
++            }
++
++            @Override
++            public void onResponse(Object response) {
++                Gson gson = new Gson();
++
++                Coordinates latLng = gson.fromJson(response.toString(), Coordinates.class);
++                setMarkersOnMap(latLng.getResults().get(0).getFormatted_address(), latLng.getResults().get(0).getGeometry().getLocation(), mName, desc, posModel);
++            }
++        });
++    }
++
++    private Map<String, String> getHeaders() {
++        return null;
++    }
++
++    private void setMarkersOnMap(String formatted_address, in.nj.nearby.model.Location location, String mName, String desc, POSModel posModel) {
++        //remove temporary markers from the map
++
++        //clear list of temp markers
++        //markersOnMap.clear();
++
++        //create and add temp markers on the list
++        /*markersOnMap.add(gMap.addMarker(new MarkerOptions().position(new LatLng(18.5540681,73.8798155)).
++                icon(BitmapDescriptorFactory.fromResource(R.drawable.shop))));*/
++        posModel.setAddress(formatted_address);
++
++       /* TextView text = new TextView(this);
++        text.setText(posModel.getTitle()+"\n"+AppConstants.getOffer());
++        IconGenerator generator = new IconGenerator(this);
++        generator.setBackground(getDrawable(getDrawableForDescription(desc)));
++        generator.setContentView(text);
++        Bitmap icon = generator.makeIcon();*/
++
++        final MarkerOptions markerOptions = new MarkerOptions().position(new LatLng(location.getLat(), location.getLng()))
++                .icon(BitmapDescriptorFactory.fromBitmap(getBitmapFromDesc(desc, posModel)))
++                .anchor(0.5f, 1);
++        markerOptions.snippet(formatted_address);
++        markerOptions.title(mName);
++        final Marker marker = gMap.addMarker(markerOptions);
++        posModel.setMarker(marker);
++
++
++        markersOnMap.add(marker);
++
++        posModel.setDistance(new DecimalFormat("0.000").format(getDistance(marker.getPosition())) + "");
++
++
++        LatLngBounds.Builder builder = new LatLngBounds.Builder();
++        for (Marker m : markersOnMap) {
++            builder.include(m.getPosition());
++        }
++        for (String key : markerHashMap.keySet()) {
++            Marker m = markerHashMap.get(key);
++            builder.include(m.getPosition());
++        }
++        LatLngBounds bounds = builder.build();
++        int width = getResources().getDisplayMetrics().widthPixels;
++        int height = getResources().getDisplayMetrics().heightPixels;
++        int padding = (int) (width * 0.10);
++        CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, width, height, padding);
++        gMap.animateCamera(cu);
++        posModel.setOnNavigationClickListener(new PosButtons.OnNavigationClickListener() {
++            @Override
++            public void onClick(View view) {
++                setNavigationButton(marker);
++            }
++        });
++        posModel.setOnCallClickListener(new PosButtons.OnCallClickListener() {
++            @Override
++            public void onClick(View view) {
++                setCallButton(marker);
++            }
++        });
++        posModel.setOnShareClickListener(new PosButtons.OnShareClickListener() {
++            @Override
++            public void onClick(View v) {
++                setShareButton(marker);
++            }
++        });
++    }
++
++
++    private int getDrawableForDescription(String desc) {
++        switch (desc) {
++            case "Cloths":
++                return R.drawable.ic_action_cloth;
++            case "Dining":
++                return R.drawable.ic_action_dining;
++            case "Travel":
++                return R.drawable.ic_action_travel;
++            case "Electronics":
++                return R.drawable.ic_action_electronics;
++        }
++        return -1;
++    }
++
++
++    GoogleMap.OnMarkerClickListener markerClickListener = new GoogleMap.OnMarkerClickListener() {
++        @Override
++        public boolean onMarkerClick(final Marker marker) {
++            if (!marker.equals(markerHashMap.get(AppConstants.CURRENT_LOCATION_KEY))) {
++                /*Dialog dialog = new Dialog(LocationActivity.this);
++                dialog.setContentView(R.layout.info_dialog);
++                dialog.setCancelable(true);
++                TextView title = dialog.findViewById(R.id.title);
++                title.setText(marker.getTitle());
++                TextView address = dialog.findViewById(R.id.address);
++                address.setText(marker.getSnippet().toString());
++                TextView offers = dialog.findViewById(R.id.offer);
++                offers.setText(AppConstants.getOffer());
++                Button navigate = dialog.findViewById(R.id.btn_navigate);
++                navigate.setOnClickListener(new View.OnClickListener() {
++                    @Override
++                    public void onClick(View v) {
++                        setNavigationButton(marker);
++                    }
++                });
++
++                Button share = dialog.findViewById(R.id.btn_share);
++                setShareButtonClickListener(share, marker);
++                dialog.show();*/
++                int index = 0;
++                for (POSModel posModel : posModelList) {
++                    if (posModel.getMarker().equals(marker)) {
++                        createMarkersDialog(posModelList, index);
++                        return true;
++                    }
++                    index++;
++                }
++                return true;
++            }
++            return false;
++        }
++    };
++
++    private boolean isCurrentLocation(Marker marker) {
++        return ((marker.getPosition().longitude == mCurrentLocation.getLongitude()) && (marker.getPosition().latitude == mCurrentLocation.getLatitude()));
++    }
++
++    private void setShareButtonClickListener(Button share, final Marker marker) {
++        share.setOnClickListener(new View.OnClickListener() {
++            @Override
++            public void onClick(View v) {
++                setShareButton(marker);
++            }
++        });
++    }
++
++    private void setShareButton(Marker marker) {
++        String message = "http://maps.google.com/maps?q=" + marker.getPosition().latitude + "," + marker.getPosition().longitude;
++        Intent sendIntent = new Intent();
++        sendIntent.setAction(Intent.ACTION_SEND);
++        sendIntent.putExtra(Intent.EXTRA_TEXT, "See you at: " + message);
++        sendIntent.setType("text/plain");
++        startActivity(Intent.createChooser(sendIntent, "Share Through"));
++    }
++
++    private void setNavigationButton(Marker marker) {
++        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://maps.google.com/maps?saddr=" + "51.461561,-0.210521" + "&daddr=" + marker.getPosition().latitude + "," + marker.getPosition().longitude));
++        startActivity(intent);
++    }
++
++    private void setCallButton(Marker marker) {
++        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
++            String number = "";
++            try {
++                for (POSModel posModel : posModelList) {
++                    if (posModel.getMarker().equals(marker)) {
++                        number = posModel.getPhoneNumber();
++                    }
++                }
++            }catch (NullPointerException e){
++                Log.d("exception",e.toString());
++            }
++            number = number.length()>0?number:"9555308310";
++            Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + number));
++            startActivity(intent);
++        } else {
++            ActivityCompat.requestPermissions(LocationActivity2.this,
++                    new String[]{Manifest.permission.CALL_PHONE},
++                    REQUEST_PERMISSIONS_REQUEST_CODE);
++        }
++    }
++
++    /**
++     * Updates fields based on data stored in the bundle.
++     *
++     * @param savedInstanceState The activity state saved in the Bundle.
++     */
++    private void updateValuesFromBundle(Bundle savedInstanceState) {
++        if (savedInstanceState != null) {
++            // Update the value of mRequestingLocationUpdates from the Bundle, and make sure that
++            // the Start Updates and Stop Updates buttons are correctly enabled or disabled.
++            if (savedInstanceState.keySet().contains(KEY_REQUESTING_LOCATION_UPDATES)) {
++                mRequestingLocationUpdates = savedInstanceState.getBoolean(
++                        KEY_REQUESTING_LOCATION_UPDATES);
++            }
++
++            // Update the value of mCurrentLocation from the Bundle and update the UI to show the
++            // correct latitude and longitude.
++            if (savedInstanceState.keySet().contains(KEY_LOCATION)) {
++                // Since KEY_LOCATION was found in the Bundle, we can be sure that mCurrentLocation
++                // is not null.
++                mCurrentLocation = savedInstanceState.getParcelable(KEY_LOCATION);
++            }
++
++            // Update the value of mLastUpdateTime from the Bundle and update the UI.
++            if (savedInstanceState.keySet().contains(KEY_LAST_UPDATED_TIME_STRING)) {
++                mLastUpdateTime = savedInstanceState.getString(KEY_LAST_UPDATED_TIME_STRING);
++            }
++            updateUI();
++        }
++    }
++
++    /**
++     * Sets up the location request. Android has two location request settings:
++     * {@code ACCESS_COARSE_LOCATION} and {@code ACCESS_FINE_LOCATION}. These settings control
++     * the accuracy of the current location. This sample uses ACCESS_FINE_LOCATION, as defined in
++     * the AndroidManifest.xml.
++     * <p/>
++     * When the ACCESS_FINE_LOCATION setting is specified, combined with a fast update
++     * interval (5 seconds), the Fused Location Provider API returns location updates that are
++     * accurate to within a few feet.
++     * <p/>
++     * These settings are appropriate for mapping applications that show real-time location
++     * updates.
++     */
++    private void createLocationRequest() {
++        mLocationRequest = new LocationRequest();
++
++        // Sets the desired interval for active location updates. This interval is
++        // inexact. You may not receive updates at all if no location sources are available, or
++        // you may receive them slower than requested. You may also receive updates faster than
++        // requested if other applications are requesting location at a faster interval.
++        mLocationRequest.setInterval(UPDATE_INTERVAL_IN_MILLISECONDS);
++
++        // Sets the fastest rate for active location updates. This interval is exact, and your
++        // application will never receive updates faster than this value.
++        mLocationRequest.setFastestInterval(FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS);
++
++        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
++    }
++
++    /**
++     * Creates a callback for receiving location events.
++     */
++    private void createLocationCallback() {
++        mLocationCallback = new LocationCallback() {
++            @Override
++            public void onLocationResult(LocationResult locationResult) {
++                super.onLocationResult(locationResult);
++
++                //mCurrentLocation = locationResult.getLastLocation();
++
++                mCurrentLocation = new Location("My Location");
++                mCurrentLocation.setLatitude(51.461561);
++                mCurrentLocation.setLongitude(-0.210521);
++                mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
++                updateLocationUI();
++            }
++        };
++    }
++
++    /**
++     * Uses a {@link LocationSettingsRequest.Builder} to build
++     * a {@link LocationSettingsRequest} that is used for checking
++     * if a device has the needed location settings.
++     */
++    private void buildLocationSettingsRequest() {
++        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
++        builder.addLocationRequest(mLocationRequest);
++        mLocationSettingsRequest = builder.build();
++    }
++
++    @Override
++    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
++        switch (requestCode) {
++            // Check for the integer request code originally supplied to startResolutionForResult().
++            case REQUEST_CHECK_SETTINGS:
++                switch (resultCode) {
++                    case Activity.RESULT_OK:
++                        Log.i(TAG, "User agreed to make required location settings changes.");
++                        // Nothing to do. startLocationupdates() gets called in onResume again.
++                        break;
++                    case Activity.RESULT_CANCELED:
++                        Log.i(TAG, "User chose not to make required location settings changes.");
++                        mRequestingLocationUpdates = false;
++                        updateUI();
++                        break;
++                }
++                break;
++        }
++    }
++
++    /**
++     * Handles the Start Updates button and requests start of location updates. Does nothing if
++     * updates have already been requested.
++     */
++    public void startUpdatesButtonHandler(View view) {
++        if (!mRequestingLocationUpdates) {
++            mRequestingLocationUpdates = true;
++            setButtonsEnabledState();
++            startLocationUpdates();
++        }
++    }
++
++    /**
++     * Handles the Stop Updates button, and requests removal of location updates.
++     */
++    public void stopUpdatesButtonHandler(View view) {
++        // It is a good practice to remove location requests when the activity is in a paused or
++        // stopped state. Doing so helps battery performance and is especially
++        // recommended in applications that request frequent location updates.
++        stopLocationUpdates();
++    }
++
++    /**
++     * Requests location updates from the FusedLocationApi. Note: we don't call this unless location
++     * runtime permission has been granted.
++     */
++    private void startLocationUpdates() {
++        // Begin by checking if the device has the necessary location settings.
++        mSettingsClient.checkLocationSettings(mLocationSettingsRequest)
++                .addOnSuccessListener(this, new OnSuccessListener<LocationSettingsResponse>() {
++                    @Override
++                    public void onSuccess(LocationSettingsResponse locationSettingsResponse) {
++                        Log.i(TAG, "All location settings are satisfied.");
++
++                        //noinspection MissingPermission
++                        if (ActivityCompat.checkSelfPermission(LocationActivity2.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(LocationActivity2.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
++                            // TODO: Consider calling
++                            //    ActivityCompat#requestPermissions
++                            // here to request the missing permissions, and then overriding
++                            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
++                            //                                          int[] grantResults)
++                            // to handle the case where the user grants the permission. See the documentation
++                            // for ActivityCompat#requestPermissions for more details.
++                            return;
++                        }
++                        mFusedLocationClient.requestLocationUpdates(mLocationRequest,
++                                mLocationCallback, Looper.myLooper());
++
++                        updateUI();
++                    }
++                })
++                .addOnFailureListener(this, new OnFailureListener() {
++                    @Override
++                    public void onFailure(@NonNull Exception e) {
++                        int statusCode = ((ApiException) e).getStatusCode();
++                        switch (statusCode) {
++                            case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
++                                Log.i(TAG, "Location settings are not satisfied. Attempting to upgrade " +
++                                        "location settings ");
++                                try {
++                                    // Show the dialog by calling startResolutionForResult(), and check the
++                                    // result in onActivityResult().
++                                    ResolvableApiException rae = (ResolvableApiException) e;
++                                    rae.startResolutionForResult(LocationActivity2.this, REQUEST_CHECK_SETTINGS);
++                                } catch (IntentSender.SendIntentException sie) {
++                                    Log.i(TAG, "PendingIntent unable to execute request.");
++                                }
++                                break;
++                            case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
++                                String errorMessage = "Location settings are inadequate, and cannot be " +
++                                        "fixed here. Fix in Settings.";
++                                Log.e(TAG, errorMessage);
++                                Toast.makeText(LocationActivity2.this, errorMessage, Toast.LENGTH_LONG).show();
++                                mRequestingLocationUpdates = false;
++                        }
++
++                        updateUI();
++                    }
++                });
++    }
++
++    /**
++     * Updates all UI fields.
++     */
++    private void updateUI() {
++        setButtonsEnabledState();
++        updateLocationUI();
++    }
++
++    /**
++     * Disables both buttons when functionality is disabled due to insuffucient location settings.
++     * Otherwise ensures that only one button is enabled at any time. The Start Updates button is
++     * enabled if the user is not requesting location updates. The Stop Updates button is enabled
++     * if the user is requesting location updates.
++     */
++    private void setButtonsEnabledState() {
++        /*if (mRequestingLocationUpdates) {
++            mStartUpdatesButton.setEnabled(false);
++            mStopUpdatesButton.setEnabled(true);
++        } else {
++            mStartUpdatesButton.setEnabled(true);
++            mStopUpdatesButton.setEnabled(false);
++        }*/
++    }
++
++    /**
++     * Sets the value of the UI fields for the location latitude, longitude and last update time.
++     */
++    private void updateLocationUI() {
++        if (gMap == null) return;
++        if (mCurrentLocation != null) {
++            mLatitudeTextView.setText(String.format(Locale.ENGLISH, "%s: %f", mLatitudeLabel,
++                    mCurrentLocation.getLatitude()));
++            mLongitudeTextView.setText(String.format(Locale.ENGLISH, "%s: %f", mLongitudeLabel,
++                    mCurrentLocation.getLongitude()));
++          /*  mLastUpdateTimeTextView.setText(String.format(Locale.ENGLISH, "%s: %s",
++                    mLastUpdateTimeLabel, mLastUpdateTime));
++        */
++            /*LatLng currentLocation = new LatLng(mCurrentLocation.getLatitude(),mCurrentLocation.getLongitude());
++            if (gMap != null) {
++                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
++                    callForLocationPermission();
++                    return;
++                }
++                gMap.setMyLocationEnabled(true);
++                if(markerHashMap.containsKey(AppConstants.CURRENT_LOCATION_KEY))
++                    markerHashMap.get(AppConstants.CURRENT_LOCATION_KEY).remove();
++                Marker marker = gMap.addMarker(new MarkerOptions().position(currentLocation).icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_here)));
++                marker.setDraggable(true);
++                markerHashMap.put(AppConstants.CURRENT_LOCATION_KEY,marker);
++                if(!zoomToLocationOnlyOnce) {
++                    gMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 17));
++                    zoomToLocationOnlyOnce = true;
++                }
++            }*/
++        }
++    }
++
++    private void callForLocationPermission() {
++    }
++
++    /**
++     * Removes location updates from the FusedLocationApi.
++     */
++    private void stopLocationUpdates() {
++        if (!mRequestingLocationUpdates) {
++            Log.d(TAG, "stopLocationUpdates: updates never requested, no-op.");
++            return;
++        }
++
++        // It is a good practice to remove location requests when the activity is in a paused or
++        // stopped state. Doing so helps battery performance and is especially
++        // recommended in applications that request frequent location updates.
++        mFusedLocationClient.removeLocationUpdates(mLocationCallback)
++                .addOnCompleteListener(this, new OnCompleteListener<Void>() {
++                    @Override
++                    public void onComplete(@NonNull Task<Void> task) {
++                        mRequestingLocationUpdates = false;
++                        setButtonsEnabledState();
++                    }
++                });
++    }
++
++    @Override
++    public void onResume() {
++        super.onResume();
++        // Within {@code onPause()}, we remove location updates. Here, we resume receiving
++        // location updates if the user has requested them.
++        if (mRequestingLocationUpdates && checkPermissions()) {
++            startLocationUpdates();
++        } else if (!checkPermissions()) {
++            requestPermissions();
++        }
++
++        updateUI();
++    }
++
++    @Override
++    protected void onPause() {
++        super.onPause();
++
++        // Remove location updates to save battery.
++        stopLocationUpdates();
++    }
++
++    /**
++     * Stores activity data in the Bundle.
++     */
++    public void onSaveInstanceState(Bundle savedInstanceState) {
++        savedInstanceState.putBoolean(KEY_REQUESTING_LOCATION_UPDATES, mRequestingLocationUpdates);
++        savedInstanceState.putParcelable(KEY_LOCATION, mCurrentLocation);
++        savedInstanceState.putString(KEY_LAST_UPDATED_TIME_STRING, mLastUpdateTime);
++        super.onSaveInstanceState(savedInstanceState);
++    }
++
++    /**
++     * Shows a {@link Snackbar}.
++     *
++     * @param mainTextStringId The id for the string resource for the Snackbar text.
++     * @param actionStringId   The text of the action item.
++     * @param listener         The listener associated with the Snackbar action.
++     */
++    private void showSnackbar(final int mainTextStringId, final int actionStringId,
++                              View.OnClickListener listener) {
++        /*Snackbar.make(
++                findViewById(android.R.id.content),
++                getString(mainTextStringId),
++                Snackbar.LENGTH_INDEFINITE)
++                .setAction(getString(actionStringId), listener).show();*/
++    }
++
++    /**
++     * Return the current state of the permissions needed.
++     */
++    private boolean checkPermissions() {
++        int permissionState = ActivityCompat.checkSelfPermission(this,
++                Manifest.permission.ACCESS_FINE_LOCATION);
++        return permissionState == PackageManager.PERMISSION_GRANTED;
++    }
++
++    private void requestPermissions() {
++        boolean shouldProvideRationale =
++                ActivityCompat.shouldShowRequestPermissionRationale(this,
++                        Manifest.permission.ACCESS_FINE_LOCATION) || ActivityCompat.shouldShowRequestPermissionRationale(this,
++                        Manifest.permission.CALL_PHONE);
++
++        // Provide an additional rationale to the user. This would happen if the user denied the
++        // request previously, but didn't check the "Don't ask again" checkbox.
++        if (shouldProvideRationale) {
++            Log.i(TAG, "Displaying permission rationale to provide additional context.");
++            showSnackbar(R.string.permission_rationale,
++                    android.R.string.ok, new View.OnClickListener() {
++                        @Override
++                        public void onClick(View view) {
++                            // Request permission
++                            ActivityCompat.requestPermissions(LocationActivity2.this,
++                                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.CALL_PHONE},
++                                    REQUEST_PERMISSIONS_REQUEST_CODE);
++                        }
++                    });
++        } else {
++            Log.i(TAG, "Requesting permission");
++            // Request permission. It's possible this can be auto answered if device policy
++            // sets the permission in a given state or the user denied the permission
++            // previously and checked "Never ask again".
++            ActivityCompat.requestPermissions(LocationActivity2.this,
++                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.CALL_PHONE},
++                    REQUEST_PERMISSIONS_REQUEST_CODE);
++        }
++    }
++
++    /**
++     * Callback received when a permissions request has been completed.
++     */
++    @Override
++    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
++                                           @NonNull int[] grantResults) {
++        Log.i(TAG, "onRequestPermissionResult");
++        if (requestCode == REQUEST_PERMISSIONS_REQUEST_CODE) {
++            if (grantResults.length <= 0) {
++                // If user interaction was interrupted, the permission request is cancelled and you
++                // receive empty arrays.
++                Log.i(TAG, "User interaction was cancelled.");
++            } else if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
++                if (mRequestingLocationUpdates) {
++                    Log.i(TAG, "Permission granted, updates requested, starting location updates");
++                    startLocationUpdates();
++                }
++            } else {
++                // Permission denied.
++
++                // Notify the user via a SnackBar that they have rejected a core permission for the
++                // app, which makes the Activity useless. In a real app, core permissions would
++                // typically be best requested during a welcome-screen flow.
++
++                // Additionally, it is important to remember that a permission might have been
++                // rejected without asking the user for permission (device policy or "Never ask
++                // again" prompts). Therefore, a user interface affordance is typically implemented
++                // when permissions are denied. Otherwise, your app could appear unresponsive to
++                // touches or interactions which have required permissions.
++                showSnackbar(R.string.permission_denied_explanation,
++                        R.string.settings, new View.OnClickListener() {
++                            @Override
++                            public void onClick(View view) {
++                                // Build intent that displays the App settings screen.
++                                Intent intent = new Intent();
++                                intent.setAction(
++                                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
++                                Uri uri = Uri.fromParts("package",
++                                        BuildConfig.APPLICATION_ID, null);
++                                intent.setData(uri);
++                                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
++                                startActivity(intent);
++                            }
++                        });
++            }
++        }
++    }
++
++    @Override
++    public void onMapReady(GoogleMap googleMap) {
++        gMap = googleMap;
++        gMap.setTrafficEnabled(true);
++        gMap.setOnMarkerClickListener(markerClickListener);
++        mCurrentLocation = new Location("My Location");
++        mCurrentLocation.setLatitude(51.461561);
++        mCurrentLocation.setLongitude(-0.210521);
++        if (mCurrentLocation != null) {
++//            LatLng currentLocation = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
++
++            LatLng currentLocation = new LatLng(51.461561, -0.210521);
++            //gMap.clear();
++            Marker marker = gMap.addMarker(new MarkerOptions().position(currentLocation).icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_here)));
++            marker.setDraggable(true);
++            gMap.setOnMarkerDragListener(new GoogleMap.OnMarkerDragListener() {
++                @Override
++                public void onMarkerDragStart(Marker marker) {
++
++                }
++
++                @Override
++                public void onMarkerDrag(Marker marker) {
++
++                }
++
++                @Override
++                public void onMarkerDragEnd(Marker marker) {
++                    if (marker.equals(markerHashMap.get(AppConstants.CURRENT_LOCATION_KEY))) {
++                        LatLng latLng = marker.getPosition();
++                        Log.d("DRAGGED Location", latLng.toString());
++                        gMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17));
++                        //call APis
++                        Location location = new Location("markerLocation");
++                        location.setLatitude(latLng.latitude);
++                        location.setLongitude(latLng.longitude);
++                        double distance = AppConstants.getFixedLocation().distanceTo(location);
++                        Log.d("Distance", distance + "");
++                        getMerchantList(mSearchTextView.getText().toString().split(","));
++                    }
++                }
++            });
++            markerHashMap.put(AppConstants.CURRENT_LOCATION_KEY, marker);
++            gMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 17));
++        }
++    }
++
++    private View posDialog;
++    RecyclerView posItemRecycleView;
++    int lastPosition;
++
++    void createMarkersDialog(List<POSModel> posModels, int focusPosition) {
++       /* final Dialog dialog = new Dialog(LocationActivity.this);
++        dialog.setContentView(R.layout.layout_dialog_poslist);
++       */// dialog.getWindow().setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
++        posDialog.setVisibility(View.GONE);
++        posItemRecycleView = findViewById(R.id.recyclerview);
++
++        List<POSModel> items = posModels;
++
++        POSItemsListAdapter adapter = new POSItemsListAdapter(items, this);
++        RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(getApplicationContext(), LinearLayoutManager.HORIZONTAL, false);
++        posItemRecycleView.setLayoutManager(layoutManager);
++        posItemRecycleView.setItemAnimator(new DefaultItemAnimator());
++        posItemRecycleView.setAdapter(adapter);
++
++        posItemRecycleView.addOnScrollListener(new RecyclerView.OnScrollListener() {
++            @Override
++            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
++                super.onScrolled(recyclerView, dx, dy);
++
++
++                //gMap.animateCamera(CameraUpdateFactory.newLatLng(posModelList.get(centerPos).getMarker().getPosition()));
++            }
++
++            boolean scrolling, stoped;
++
++            @Override
++            public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
++                super.onScrollStateChanged(recyclerView, newState);
++                switch (newState) {
++                    case RecyclerView.SCROLL_STATE_IDLE:
++                        System.out.println("The RecyclerView is not scrolling");
++                        if (scrolling) {
++                            int center = posItemRecycleView.getWidth() / 2;
++                            View centerView = posItemRecycleView.findChildViewUnder(center, posItemRecycleView.getTop());
++                            int centerPos = posItemRecycleView.getChildAdapterPosition(centerView);
++                            Log.d("CenterPOS", centerPos + "");
++                            if (lastPosition != centerPos && centerPos >= 0) {
++                                POSModel posModel = posModelList.get(centerPos);
++                                LatLng latLng = posModel.getMarker().getPosition();
++                                gMap.animateCamera(CameraUpdateFactory.newLatLng(latLng));
++                                lastPosition = centerPos;
++                                posItemRecycleView.getLayoutManager().smoothScrollToPosition(recyclerView, new RecyclerView.State(), centerPos);
++                            }
++                            scrolling = false;
++                        }
++                        break;
++                    case RecyclerView.SCROLL_STATE_DRAGGING:
++                        System.out.println("Scrolling now");
++                        break;
++                    case RecyclerView.SCROLL_STATE_SETTLING:
++                        System.out.println("Scroll Settling");
++
++                        scrolling = true;
++                        break;
++                }
++            }
++        });
++
++        posDialog.setVisibility(View.VISIBLE);
++        focusPosItem(focusPosition);
++        //dialog.show();
++    }
++
++    void focusPosItem(int position) {
++        if (posItemRecycleView != null) {
++            posItemRecycleView.getLayoutManager().scrollToPosition(position);
++        }
++    }
++
++    @Override
++    public void onBackPressed() {
++        if (posDialog != null && posDialog.getVisibility() == View.VISIBLE) {
++            posDialog.setVisibility(View.GONE);
++        } else
++            super.onBackPressed();
++    }
++
++    Bitmap getBitmapFromDesc(String desc, POSModel posModel) {
++        LayoutInflater inflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
++        View view = inflater.inflate(R.layout.layout_marker_icon, null);
++        TextView tv = (TextView) view.findViewById(R.id.marker_text);
++        ImageView iv = (ImageView) view.findViewById(R.id.marker_icon);
++        Random random = new Random();
++        int x = random.nextInt(4) + 1;
++        tv.setText(posModel.getTitle() + "\n" + x + "X");
++        iv.setBackground(getDrawable(getDrawableForDescription(desc)));
++
++        view.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
++                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
++
++        // view.layout(0, 0, view.getMeasuredWidth(), view.getMeasuredHeight());
++        view.layout(0, 0, view.getMeasuredWidth(), view.getMeasuredHeight());
++
++        Bitmap bitmap = Bitmap.createBitmap(view.getMeasuredWidth(),
++                view.getMeasuredHeight(),
++                Bitmap.Config.ARGB_8888);
++
++        Canvas c = new Canvas(bitmap);
++
++        //Render this view (and all of its children) to the given Canvas
++        view.draw(c);
++
++        return bitmap;
++    }
++
++    private double getDistance(LatLng latLng) {
++        Location location = new Location("markerLocation");
++        location.setLatitude(latLng.latitude);
++        location.setLongitude(latLng.longitude);
++        double distance = AppConstants.getFixedLocation().distanceTo(location);
++        Log.d("Distance", distance + "");
++        return distance;
++    }
++}
+\ No newline at end of file
+Index: app/src/main/res/drawable/rounded_corner_bg.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/res/drawable/rounded_corner_bg.xml	(revision )
++++ app/src/main/res/drawable/rounded_corner_bg.xml	(revision )
+@@ -0,0 +1,12 @@
++<?xml version="1.0" encoding="utf-8"?>
++<shape xmlns:android="http://schemas.android.com/apk/res/android" >
++
++    <solid android:color="#FFF" />
++
++   <!-- <stroke
++        android:width="2dp"
++        android:color="#FF785C" />-->
++
++    <corners android:radius="10dp" />
++
++</shape>
+\ No newline at end of file
+Index: app/src/main/res/layout/popup_menu_items.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/res/layout/popup_menu_items.xml	(revision )
++++ app/src/main/res/layout/popup_menu_items.xml	(revision )
+@@ -0,0 +1,58 @@
++<?xml version="1.0" encoding="utf-8"?>
++<LinearLayout
++    xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="wrap_content"
++    android:background="@drawable/rounded_corner_bg"
++    android:layout_height="wrap_content"
++    android:orientation="vertical">
++
++    <LinearLayout
++        android:layout_width="wrap_content"
++        android:layout_height="match_parent"
++        android:gravity="right"
++        android:orientation="horizontal">
++
++        <TextView
++            android:layout_width="wrap_content"
++            android:layout_height="wrap_content"
++            android:layout_gravity="center"
++            android:layout_margin="6dp"
++            android:textStyle="bold"
++            android:textColor="#000"
++            android:text="Show on map"/>
++
++        <ImageButton
++            android:id="@+id/showOnMap"
++            android:layout_width="44dp"
++            android:layout_height="44dp"
++            android:layout_margin="6dp"
++            android:background="@drawable/map"
++            />
++
++    </LinearLayout>
++
++    <LinearLayout
++        android:layout_width="match_parent"
++        android:layout_height="wrap_content"
++        android:gravity="right"
++        android:orientation="horizontal">
++        <TextView
++            android:layout_width="wrap_content"
++            android:layout_height="wrap_content"
++            android:layout_gravity="center"
++            android:layout_margin="6dp"
++            android:textStyle="bold"
++            android:textColor="#000"
++            android:text="Filter"/>
++
++        <ImageButton
++            android:id="@+id/showFilter"
++            android:layout_width="44dp"
++            android:layout_height="44dp"
++            android:layout_margin="6dp"
++            android:background="@drawable/filter" />
++
++    </LinearLayout>
++
++
++
++</LinearLayout>
+\ No newline at end of file
+Index: app/src/main/java/in/nj/nearby/MainActivity.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/in/nj/nearby/MainActivity.java	(revision b7c6a4305b123369907fd04e3a509ec25530c4e7)
++++ app/src/main/java/in/nj/nearby/MainActivity.java	(revision )
+@@ -3,16 +3,26 @@
+ import android.content.Intent;
+ import android.support.v7.app.AppCompatActivity;
+ import android.os.Bundle;
++import android.view.View;
++import android.widget.Button;
+ 
+ import in.nj.nearby.views.LocationActivity;
++import in.nj.nearby.views.OffersListActivity;
+ 
+ public class MainActivity extends AppCompatActivity {
+ 
++    Button nearBy ;
+     @Override
+     protected void onCreate(Bundle savedInstanceState) {
+         super.onCreate(savedInstanceState);
+         setContentView(R.layout.activity_main);
+ 
+-        startActivity(new Intent(this, LocationActivity.class));
++        nearBy = findViewById(R.id.nearBy);
++        nearBy.setOnClickListener(new View.OnClickListener() {
++            @Override
++            public void onClick(View view) {
++                startActivity(new Intent(MainActivity.this, OffersListActivity.class));
++            }
++        });
+     }
+ }
+Index: app/src/main/java/in/nj/nearby/views/LocationActivity.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/in/nj/nearby/views/LocationActivity.java	(revision b7c6a4305b123369907fd04e3a509ec25530c4e7)
++++ app/src/main/java/in/nj/nearby/views/LocationActivity.java	(revision )
+@@ -10,8 +10,6 @@
+ import android.content.pm.PackageManager;
+ import android.graphics.Bitmap;
+ import android.graphics.Canvas;
+-import android.graphics.Color;
+-import android.graphics.drawable.ColorDrawable;
+ import android.location.Location;
+ import android.net.Uri;
+ import android.os.Bundle;
+@@ -52,7 +50,6 @@
+ import com.google.android.gms.maps.GoogleMap;
+ import com.google.android.gms.maps.OnMapReadyCallback;
+ import com.google.android.gms.maps.SupportMapFragment;
+-import com.google.android.gms.maps.model.BitmapDescriptor;
+ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+ import com.google.android.gms.maps.model.LatLng;
+ import com.google.android.gms.maps.model.LatLngBounds;
+@@ -63,7 +60,6 @@
+ import com.google.android.gms.tasks.OnSuccessListener;
+ import com.google.android.gms.tasks.Task;
+ import com.google.gson.Gson;
+-import com.google.maps.android.ui.IconGenerator;
+ 
+ import java.text.DateFormat;
+ import java.text.DecimalFormat;
+@@ -94,7 +90,7 @@
+  * Created by hp on 30-11-2017.
+  */
+ 
+-public class LocationActivity extends AppCompatActivity implements OnMapReadyCallback{
++public class LocationActivity extends AppCompatActivity implements OnMapReadyCallback {
+     private static final String TAG = LocationActivity.class.getSimpleName();
+ 
+     private GoogleMap gMap;
+@@ -191,7 +187,7 @@
+     final Set<String> checkedItems = new HashSet<>();
+ 
+     //this is used to store permanent markers on the map
+-    Map<String,Marker> markerHashMap = new HashMap<>();
++    Map<String, Marker> markerHashMap = new HashMap<>();
+ 
+     //this is used to stop temporary markers on the map
+     List<Marker> markersOnMap = new ArrayList<>();
+@@ -238,24 +234,24 @@
+                 createDialog();
+             }
+         });
+-        posDialog = (View)findViewById(R.id.posDialog);
++        posDialog = (View) findViewById(R.id.posDialog);
+         getMerchantList(AppConstants.getCatagories().toArray(new String[AppConstants.getCatagories().size()]));
+         //createMarkersDialog(null,0);
+     }
+ 
+-    private void createDialog(){
+-// custom dialog
++    private void createDialog() {
++        // custom dialog
+         final Dialog dialog = new Dialog(LocationActivity.this);
+         dialog.setContentView(R.layout.dialog_search_items);
+         dialog.getWindow().setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT);
+         dialog.setTitle("Type preferences");
+ 
+-        RecyclerView recyclerView = (RecyclerView)dialog.findViewById(R.id.recyclerview);
++        RecyclerView recyclerView = (RecyclerView) dialog.findViewById(R.id.recyclerview);
+         mSearchEditText = (EditText) dialog.findViewById(R.id.search_edittext);
+ 
+         List<String> items = AppConstants.getCatagories();
+ 
+-        mAdapter = new SearchListAdapter(items,checkedItems);
++        mAdapter = new SearchListAdapter(items, checkedItems);
+         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(getApplicationContext());
+         recyclerView.setLayoutManager(layoutManager);
+         recyclerView.setItemAnimator(new DefaultItemAnimator());
+@@ -269,7 +265,7 @@
+ 
+             @Override
+             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+-                if(mAdapter!=null){
++                if (mAdapter != null) {
+                     mAdapter.getFilter().filter(charSequence.toString().trim());
+                 }
+             }
+@@ -283,13 +279,13 @@
+         dialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
+             @Override
+             public void onCancel(DialogInterface dialogInterface) {
+-                Log.d("Checked-ITEMS:",checkedItems.toString()) ;
++                Log.d("Checked-ITEMS:", checkedItems.toString());
+                 mSearchTextView.setText("");
+-                for(String s : checkedItems) {
+-                    if(mSearchTextView.getText().length()<1){
++                for (String s : checkedItems) {
++                    if (mSearchTextView.getText().length() < 1) {
+                         mSearchTextView.setText(s);
+-                    }else
+-                    mSearchTextView.setText(mSearchTextView.getText()+","+s);
++                    } else
++                        mSearchTextView.setText(mSearchTextView.getText() + "," + s);
+                 }
+                 //TODO:
+ 
+@@ -308,7 +304,7 @@
+     }
+ 
+     private void clearMarkerOnMap() {
+-        for(Marker marker : markersOnMap){
++        for (Marker marker : markersOnMap) {
+             marker.remove();
+         }
+         markersOnMap.clear();
+@@ -316,9 +312,9 @@
+ 
+     private void getMerchantList(String[] type) {
+         Map<String, String> parameter = new HashMap<>();
+-        int i=1;
+-        for (String types : type){
+-            parameter.put("type"+(i++),types);
++        int i = 1;
++        for (String types : type) {
++            parameter.put("type" + (i++), types);
+         }
+         ServerCommunication.getmInstance().addJSONGetRequest(AppConstants.GET_POS_URL, parameter, null, new ServiceResponseListener() {
+             @Override
+@@ -337,37 +333,37 @@
+ 
+     private void getCoordinatesForPosList(POS pos) {
+         posModelList = new ArrayList<>();
+-        for(POSDetails posDetails : pos.getPos()){
+-            POSModel posModel = new POSModel(posDetails.getM_NAME(),posDetails.getOUTER_POSTAL_CODE() + posDetails.getINNER_POSTAL_CODE(),
+-                    AppConstants.getOffer(),posDetails.getMID());
++        for (POSDetails posDetails : pos.getPos()) {
++            POSModel posModel = new POSModel(posDetails.getM_NAME(), posDetails.getOUTER_POSTAL_CODE() + posDetails.getINNER_POSTAL_CODE(),
++                    AppConstants.getOffer(), posDetails.getMID());
+             posModel.setOnCallClickListener(new PosButtons.OnCallClickListener() {
+                 @Override
+                 public void onClick(View view) {
+-                    Log.d("CALLCLICK","hanji");
++                    Log.d("CALLCLICK", "hanji");
+                 }
+             });
+             posModel.setOnNavigationClickListener(new PosButtons.OnNavigationClickListener() {
+                 @Override
+                 public void onClick(View view) {
+-                    Log.d("NavigationCLICK","hanji");
++                    Log.d("NavigationCLICK", "hanji");
+                 }
+             });
+             posModel.setOnShareClickListener(new PosButtons.OnShareClickListener() {
+                 @Override
+                 public void onClick(View view) {
+-                    Log.d("shareCLICK","hanji");
++                    Log.d("shareCLICK", "hanji");
+                 }
+             });
+             posModelList.add(posModel);
+-            getLatLngForAddress(posDetails.getOUTER_POSTAL_CODE() + posDetails.getINNER_POSTAL_CODE(),posDetails.getM_NAME(),posDetails.getMCC_DSC(),posModel);
++            getLatLngForAddress(posDetails.getOUTER_POSTAL_CODE() + posDetails.getINNER_POSTAL_CODE(), posDetails.getM_NAME(), posDetails.getMCC_DSC(), posModel);
+         }
+     }
+ 
+     private void getLatLngForAddress(String address, final String mName, final String desc, final POSModel posModel) {
+         final Map<String, String> parameter = new HashMap<>();
+         posModel.setCategory(desc);
+-        parameter.put("address",address);
+-        parameter.put("key","AIzaSyCWcjr8FbpiGxerhFjKRWJH0j6LEl9A4OU");
++        parameter.put("address", address);
++        parameter.put("key", "AIzaSyCWcjr8FbpiGxerhFjKRWJH0j6LEl9A4OU");
+ 
+ 
+         ServerCommunication.getmInstance().addJSONGetRequest(AppConstants.GET_ADDRESS_URL, parameter, getHeaders(), new ServiceResponseListener() {
+@@ -381,7 +377,7 @@
+                 Gson gson = new Gson();
+ 
+                 Coordinates latLng = gson.fromJson(response.toString(), Coordinates.class);
+-                setMarkersOnMap(latLng.getResults().get(0).getFormatted_address(), latLng.getResults().get(0).getGeometry().getLocation(),mName,desc,posModel);
++                setMarkersOnMap(latLng.getResults().get(0).getFormatted_address(), latLng.getResults().get(0).getGeometry().getLocation(), mName, desc, posModel);
+             }
+         });
+     }
+@@ -390,7 +386,7 @@
+         return null;
+     }
+ 
+-    private void setMarkersOnMap(String formatted_address, in.nj.nearby.model.Location location,String mName,String desc,POSModel posModel) {
++    private void setMarkersOnMap(String formatted_address, in.nj.nearby.model.Location location, String mName, String desc, POSModel posModel) {
+         //remove temporary markers from the map
+ 
+         //clear list of temp markers
+@@ -408,8 +404,8 @@
+         generator.setContentView(text);
+         Bitmap icon = generator.makeIcon();*/
+ 
+-        final MarkerOptions markerOptions = new MarkerOptions().position(new LatLng(location.getLat(),location.getLng()))
+-                .icon(BitmapDescriptorFactory.fromBitmap(getBitmapFromDesc(desc,posModel)))
++        final MarkerOptions markerOptions = new MarkerOptions().position(new LatLng(location.getLat(), location.getLng()))
++                .icon(BitmapDescriptorFactory.fromBitmap(getBitmapFromDesc(desc, posModel)))
+                 .anchor(0.5f, 1);
+         markerOptions.snippet(formatted_address);
+         markerOptions.title(mName);
+@@ -419,14 +415,14 @@
+ 
+         markersOnMap.add(marker);
+ 
+-        posModel.setDistance(new DecimalFormat("0.000").format(getDistance(marker.getPosition()))+"");
++        posModel.setDistance(new DecimalFormat("0.000").format(getDistance(marker.getPosition())) + "");
+ 
+ 
+         LatLngBounds.Builder builder = new LatLngBounds.Builder();
+-        for(Marker m : markersOnMap){
++        for (Marker m : markersOnMap) {
+             builder.include(m.getPosition());
+         }
+-        for(String key : markerHashMap.keySet()){
++        for (String key : markerHashMap.keySet()) {
+             Marker m = markerHashMap.get(key);
+             builder.include(m.getPosition());
+         }
+@@ -445,7 +441,7 @@
+         posModel.setOnCallClickListener(new PosButtons.OnCallClickListener() {
+             @Override
+             public void onClick(View view) {
+-               setCallButton(marker);
++                setCallButton(marker);
+             }
+         });
+         posModel.setOnShareClickListener(new PosButtons.OnShareClickListener() {
+@@ -458,14 +454,14 @@
+ 
+ 
+     private int getDrawableForDescription(String desc) {
+-        switch (desc){
+-            case "Cloths" :
++        switch (desc) {
++            case "Cloths":
+                 return R.drawable.ic_action_cloth;
+-            case "Dining" :
++            case "Dining":
+                 return R.drawable.ic_action_dining;
+-            case "Travel" :
++            case "Travel":
+                 return R.drawable.ic_action_travel;
+-            case "Electronics" :
++            case "Electronics":
+                 return R.drawable.ic_action_electronics;
+         }
+         return -1;
+@@ -475,7 +471,7 @@
+     GoogleMap.OnMarkerClickListener markerClickListener = new GoogleMap.OnMarkerClickListener() {
+         @Override
+         public boolean onMarkerClick(final Marker marker) {
+-            if(!marker.equals(markerHashMap.get(AppConstants.CURRENT_LOCATION_KEY))) {
++            if (!marker.equals(markerHashMap.get(AppConstants.CURRENT_LOCATION_KEY))) {
+                 /*Dialog dialog = new Dialog(LocationActivity.this);
+                 dialog.setContentView(R.layout.info_dialog);
+                 dialog.setCancelable(true);
+@@ -497,9 +493,9 @@
+                 setShareButtonClickListener(share, marker);
+                 dialog.show();*/
+                 int index = 0;
+-                for(POSModel posModel : posModelList){
+-                    if(posModel.getMarker().equals(marker)){
+-                        createMarkersDialog(posModelList,index);
++                for (POSModel posModel : posModelList) {
++                    if (posModel.getMarker().equals(marker)) {
++                        createMarkersDialog(posModelList, index);
+                         return true;
+                     }
+                     index++;
+@@ -533,7 +529,7 @@
+     }
+ 
+     private void setNavigationButton(Marker marker) {
+-        Intent intent = new Intent(Intent.ACTION_VIEW,Uri.parse("http://maps.google.com/maps?saddr=" + "51.461561,-0.210521" + "&daddr=" + marker.getPosition().latitude+","+marker.getPosition().longitude));
++        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://maps.google.com/maps?saddr=" + "51.461561,-0.210521" + "&daddr=" + marker.getPosition().latitude + "," + marker.getPosition().longitude));
+         startActivity(intent);
+     }
+ 
+@@ -541,7 +537,7 @@
+         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
+             Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + "8983504649"));
+             startActivity(intent);
+-        }else{
++        } else {
+             ActivityCompat.requestPermissions(LocationActivity.this,
+                     new String[]{Manifest.permission.CALL_PHONE},
+                     REQUEST_PERMISSIONS_REQUEST_CODE);
+@@ -965,7 +961,7 @@
+         mCurrentLocation = new Location("My Location");
+         mCurrentLocation.setLatitude(51.461561);
+         mCurrentLocation.setLongitude(-0.210521);
+-        if(mCurrentLocation!=null){
++        if (mCurrentLocation != null) {
+ //            LatLng currentLocation = new LatLng(mCurrentLocation.getLatitude(), mCurrentLocation.getLongitude());
+ 
+             LatLng currentLocation = new LatLng(51.461561, -0.210521);
+@@ -985,39 +981,40 @@
+ 
+                 @Override
+                 public void onMarkerDragEnd(Marker marker) {
+-                    if(marker.equals(markerHashMap.get(AppConstants.CURRENT_LOCATION_KEY))){
++                    if (marker.equals(markerHashMap.get(AppConstants.CURRENT_LOCATION_KEY))) {
+                         LatLng latLng = marker.getPosition();
+-                        Log.d("DRAGGED Location",latLng.toString());
+-                        gMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng,17));
++                        Log.d("DRAGGED Location", latLng.toString());
++                        gMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 17));
+                         //call APis
+                         Location location = new Location("markerLocation");
+                         location.setLatitude(latLng.latitude);
+                         location.setLongitude(latLng.longitude);
+                         double distance = AppConstants.getFixedLocation().distanceTo(location);
+-                        Log.d("Distance",distance+"");
++                        Log.d("Distance", distance + "");
+                         getMerchantList(mSearchTextView.getText().toString().split(","));
+                     }
+                 }
+             });
+-            markerHashMap.put(AppConstants.CURRENT_LOCATION_KEY,marker);
+-            gMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation,17));
++            markerHashMap.put(AppConstants.CURRENT_LOCATION_KEY, marker);
++            gMap.moveCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 17));
+         }
+     }
+ 
+-private View posDialog;
++    private View posDialog;
+     RecyclerView posItemRecycleView;
+     int lastPosition;
+-    void createMarkersDialog(List<POSModel> posModels,int focusPosition){
++
++    void createMarkersDialog(List<POSModel> posModels, int focusPosition) {
+        /* final Dialog dialog = new Dialog(LocationActivity.this);
+         dialog.setContentView(R.layout.layout_dialog_poslist);
+        */// dialog.getWindow().setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
+         posDialog.setVisibility(View.GONE);
+         posItemRecycleView = findViewById(R.id.recyclerview);
+ 
+-        List<POSModel> items =posModels;
++        List<POSModel> items = posModels;
+ 
+-        POSItemsListAdapter adapter = new POSItemsListAdapter(items,this);
+-        RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(getApplicationContext(),LinearLayoutManager.HORIZONTAL,false);
++        POSItemsListAdapter adapter = new POSItemsListAdapter(items, this);
++        RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(getApplicationContext(), LinearLayoutManager.HORIZONTAL, false);
+         posItemRecycleView.setLayoutManager(layoutManager);
+         posItemRecycleView.setItemAnimator(new DefaultItemAnimator());
+         posItemRecycleView.setAdapter(adapter);
+@@ -1028,28 +1025,28 @@
+                 super.onScrolled(recyclerView, dx, dy);
+ 
+ 
+-
+                 //gMap.animateCamera(CameraUpdateFactory.newLatLng(posModelList.get(centerPos).getMarker().getPosition()));
+             }
+ 
+-            boolean scrolling,stoped;
++            boolean scrolling, stoped;
++
+             @Override
+             public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+                 super.onScrollStateChanged(recyclerView, newState);
+                 switch (newState) {
+                     case RecyclerView.SCROLL_STATE_IDLE:
+                         System.out.println("The RecyclerView is not scrolling");
+-                        if(scrolling){
+-                            int center = posItemRecycleView.getWidth()/2;
+-                            View centerView = posItemRecycleView.findChildViewUnder(center,posItemRecycleView.getTop());
++                        if (scrolling) {
++                            int center = posItemRecycleView.getWidth() / 2;
++                            View centerView = posItemRecycleView.findChildViewUnder(center, posItemRecycleView.getTop());
+                             int centerPos = posItemRecycleView.getChildAdapterPosition(centerView);
+-                            Log.d("CenterPOS",centerPos+"");
+-                            if(lastPosition!=centerPos && centerPos>=0){
++                            Log.d("CenterPOS", centerPos + "");
++                            if (lastPosition != centerPos && centerPos >= 0) {
+                                 POSModel posModel = posModelList.get(centerPos);
+                                 LatLng latLng = posModel.getMarker().getPosition();
+                                 gMap.animateCamera(CameraUpdateFactory.newLatLng(latLng));
+                                 lastPosition = centerPos;
+-                                posItemRecycleView.getLayoutManager().smoothScrollToPosition(recyclerView,new RecyclerView.State(),centerPos);
++                                posItemRecycleView.getLayoutManager().smoothScrollToPosition(recyclerView, new RecyclerView.State(), centerPos);
+                             }
+                             scrolling = false;
+                         }
+@@ -1071,35 +1068,34 @@
+         //dialog.show();
+     }
+ 
+-    void focusPosItem(int position){
+-        if(posItemRecycleView!=null){
++    void focusPosItem(int position) {
++        if (posItemRecycleView != null) {
+             posItemRecycleView.getLayoutManager().scrollToPosition(position);
+         }
+     }
+ 
+     @Override
+     public void onBackPressed() {
+-        if(posDialog!=null && posDialog.getVisibility() == View.VISIBLE){
++        if (posDialog != null && posDialog.getVisibility() == View.VISIBLE) {
+             posDialog.setVisibility(View.GONE);
+-        }else
+-        super.onBackPressed();
++        } else
++            super.onBackPressed();
+     }
+ 
+-
+-    Bitmap getBitmapFromDesc(String desc,POSModel posModel){
++    Bitmap getBitmapFromDesc(String desc, POSModel posModel) {
+         LayoutInflater inflater = (LayoutInflater) getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+         View view = inflater.inflate(R.layout.layout_marker_icon, null);
+-        TextView tv = (TextView)view.findViewById(R.id.marker_text);
+-        ImageView iv = (ImageView)view.findViewById(R.id.marker_icon);
++        TextView tv = (TextView) view.findViewById(R.id.marker_text);
++        ImageView iv = (ImageView) view.findViewById(R.id.marker_icon);
+         Random random = new Random();
+-        int x = random.nextInt(4)+1;
+-        tv.setText(posModel.getTitle()+"\n"+x+"X");
++        int x = random.nextInt(4) + 1;
++        tv.setText(posModel.getTitle() + "\n" + x + "X");
+         iv.setBackground(getDrawable(getDrawableForDescription(desc)));
+ 
+         view.measure(View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
+                 View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+ 
+-       // view.layout(0, 0, view.getMeasuredWidth(), view.getMeasuredHeight());
++        // view.layout(0, 0, view.getMeasuredWidth(), view.getMeasuredHeight());
+         view.layout(0, 0, view.getMeasuredWidth(), view.getMeasuredHeight());
+ 
+         Bitmap bitmap = Bitmap.createBitmap(view.getMeasuredWidth(),
+@@ -1114,12 +1110,12 @@
+         return bitmap;
+     }
+ 
+-    private double getDistance(LatLng latLng){
++    private double getDistance(LatLng latLng) {
+         Location location = new Location("markerLocation");
+         location.setLatitude(latLng.latitude);
+         location.setLongitude(latLng.longitude);
+         double distance = AppConstants.getFixedLocation().distanceTo(location);
+-        Log.d("Distance",distance+"");
++        Log.d("Distance", distance + "");
+         return distance;
+     }
+ }
+\ No newline at end of file
+Index: app/src/main/res/values/colors.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/res/values/colors.xml	(revision b7c6a4305b123369907fd04e3a509ec25530c4e7)
++++ app/src/main/res/values/colors.xml	(revision )
+@@ -1,11 +1,11 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <resources>
+-    <color name="colorPrimary">#2c3e50</color>
+-    <color name="colorPrimaryDark">#2c3e50</color>
+-    <color name="colorAccent">#2c3e50</color>
+-    <color name="grey_blue">#34495b</color>
+-    <color name="grey_blue_dark">#2c3e50</color>
+-    <color name="grey_blue_light">#3C6478</color>
++    <color name="colorPrimary">#085da9</color>
++    <color name="colorPrimaryDark">#085da9</color>
++    <color name="colorAccent">#085da9</color>
++    <color name="grey_blue">#085da9</color>
++    <color name="grey_blue_dark">#085da9</color>
++    <color name="grey_blue_light">#085da9</color>
+     <color name="white">#FFFFFF</color>
+     <color name="light_grey">#EBEBEB</color>
+ </resources>
+Index: app/src/main/res/menu/sortby_popup.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/res/menu/sortby_popup.xml	(revision )
++++ app/src/main/res/menu/sortby_popup.xml	(revision )
+@@ -0,0 +1,9 @@
++<?xml version="1.0" encoding="utf-8"?>
++<menu xmlns:android="http://schemas.android.com/apk/res/android">
++    <item
++        android:title="Rewards"
++        android:id="@+id/rewards"/>
++    <item
++        android:title="Distance"
++        android:id="@+id/distance"/>
++</menu>
+\ No newline at end of file
+Index: app/src/main/res/values/strings.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/res/values/strings.xml	(revision b7c6a4305b123369907fd04e3a509ec25530c4e7)
++++ app/src/main/res/values/strings.xml	(revision )
+@@ -1,5 +1,5 @@
+ <resources>
+-    <string name="app_name">NearBy</string>
++    <string name="app_name">Barclays</string>
+ 
+     <string name="latitude_label">Latitude</string>
+     <string name="longitude_label">Longitude</string>
+Index: app/src/main/java/in/nj/nearby/common/PosDistanceComparator.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/in/nj/nearby/common/PosDistanceComparator.java	(revision )
++++ app/src/main/java/in/nj/nearby/common/PosDistanceComparator.java	(revision )
+@@ -0,0 +1,23 @@
++package in.nj.nearby.common;
++
++import java.util.Comparator;
++
++import in.nj.nearby.model.POSModel;
++
++/**
++ * Created by nitesh on 12-12-2017.
++ */
++
++public class PosDistanceComparator implements Comparator<POSModel> {
++
++    @Override
++    public int compare(POSModel posModel, POSModel t1) {
++        double distance1 = Double.parseDouble(posModel.getDistance());
++        double distance2 = Double.parseDouble(t1.getDistance());
++        if(distance1<distance2)
++            return -1;
++        else if (distance1>distance2)
++            return 1;
++        return 0;
++    }
++}
+Index: app/src/main/java/in/nj/nearby/common/AppConstants.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/in/nj/nearby/common/AppConstants.java	(revision b7c6a4305b123369907fd04e3a509ec25530c4e7)
++++ app/src/main/java/in/nj/nearby/common/AppConstants.java	(revision )
+@@ -3,6 +3,8 @@
+ import android.util.Log;
+ import android.view.View;
+ 
++import com.google.android.gms.maps.model.LatLng;
++
+ import java.util.ArrayList;
+ import java.util.List;
+ import java.util.Random;
+@@ -23,6 +25,8 @@
+             "Spend more then 200$ get 20% off",
+             "Buy one get one"};
+ 
++    public static final String response = "{\"message\":\"success\",\"status\":200,\"pos\":[{\"MID\":\"416696\",\"TID\":\"16885527\",\"MCC_CDE\":\"2741\",\"M_NAME\":\"S Dining & Sweets\",\"MCC_DSC\":\"Dining\",\"OUTER_POSTAL_CODE\":\"SW15\",\"INNER_POSTAL_CODE\":\"2NQ\",\"PREMISE_NUM\":\"\",\"PREMISE_NME\":\"COTTESBROOKE PARK\",\"STREET_NUM\":\"148\",\"STREET_NME\":\"PUTNEY BRIDGE RD\",\"DISTRICT_NME\":\"\",\"CITY_NME\":\"LONDON\"},{\"MID\":\"416697\",\"TID\":\"16885532\",\"MCC_CDE\":\"2741\",\"M_NAME\":\"D Garments\",\"MCC_DSC\":\"Cloths\",\"OUTER_POSTAL_CODE\":\"SW15\",\"INNER_POSTAL_CODE\":\"2NQ\",\"PREMISE_NUM\":\"\",\"PREMISE_NME\":\"COTTESBROOKE PARK\",\"STREET_NUM\":\"148\",\"STREET_NME\":\"PUTNEY BRIDGE RD\",\"DISTRICT_NME\":\"\",\"CITY_NME\":\"LONDON\"},{\"MID\":\"416694\",\"TID\":\"16885537\",\"MCC_CDE\":\"2741\",\"M_NAME\":\"Stuart Travels\",\"MCC_DSC\":\"Travel\",\"OUTER_POSTAL_CODE\":\"SW15\",\"INNER_POSTAL_CODE\":\"2NL\",\"PREMISE_NUM\":\"\",\"PREMISE_NME\":\"COTTESBROOKE PARK\",\"STREET_NUM\":\"148\",\"STREET_NME\":\"PUTNEY BRIDGE RD\",\"DISTRICT_NME\":\"\",\"CITY_NME\":\"LONDON\"},{\"MID\":\"416695\",\"TID\":\"16885542\",\"MCC_CDE\":\"2741\",\"M_NAME\":\"Mike Electronics\",\"MCC_DSC\":\"Electronics\",\"OUTER_POSTAL_CODE\":\"SW15\",\"INNER_POSTAL_CODE\":\"2NJ\",\"PREMISE_NUM\":\"\",\"PREMISE_NME\":\"COTTESBROOKE PARK\",\"STREET_NUM\":\"148\",\"STREET_NME\":\"PUTNEY BRIDGE RD\",\"DISTRICT_NME\":\"\",\"CITY_NME\":\"LONDON\"},{\"MID\":\"416698\",\"TID\":\"16885547\",\"MCC_CDE\":\"2741\",\"M_NAME\":\"S Dining & Snaks\",\"MCC_DSC\":\"Dining\",\"OUTER_POSTAL_CODE\":\"SW15\",\"INNER_POSTAL_CODE\":\"2PE\",\"PREMISE_NUM\":\"\",\"PREMISE_NME\":\"COTTESBROOKE PARK\",\"STREET_NUM\":\"148\",\"STREET_NME\":\"PUTNEY BRIDGE RD\",\"DISTRICT_NME\":\"\",\"CITY_NME\":\"LONDON\"},{\"MID\":\"416699\",\"TID\":\"16885567\",\"MCC_CDE\":\"2741\",\"M_NAME\":\"David Garments\",\"MCC_DSC\":\"Cloths\",\"OUTER_POSTAL_CODE\":\"SW15\",\"INNER_POSTAL_CODE\":\"2NL\",\"PREMISE_NUM\":\"\",\"PREMISE_NME\":\"COTTESBROOKE PARK\",\"STREET_NUM\":\"148\",\"STREET_NME\":\"PUTNEY BRIDGE RD\",\"DISTRICT_NME\":\"\",\"CITY_NME\":\"LONDON\"},{\"MID\":\"416704\",\"TID\":\"16885573\",\"MCC_CDE\":\"2741\",\"M_NAME\":\"Peter Travels\",\"MCC_DSC\":\"Travel\",\"OUTER_POSTAL_CODE\":\"SW15\",\"INNER_POSTAL_CODE\":\"2NN\",\"PREMISE_NUM\":\"\",\"PREMISE_NME\":\"COTTESBROOKE PARK\",\"STREET_NUM\":\"148\",\"STREET_NME\":\"PUTNEY BRIDGE RD\",\"DISTRICT_NME\":\"\",\"CITY_NME\":\"LONDON\"},{\"MID\":\"416703\",\"TID\":\"16885575\",\"MCC_CDE\":\"2338\",\"M_NAME\":\"Indian Dining\",\"MCC_DSC\":\"Dining\",\"OUTER_POSTAL_CODE\":\"SW15\",\"INNER_POSTAL_CODE\":\"2NG\",\"PREMISE_NUM\":\"\",\"PREMISE_NME\":\"PALM HILLS\",\"STREET_NUM\":\"42\",\"STREET_NME\":\"ORCHARD LN\",\"DISTRICT_NME\":\"\",\"CITY_NME\":\"SOUTHAMPTON\"},{\"MID\":\"416703\",\"TID\":\"16885575\",\"MCC_CDE\":\"2338\",\"M_NAME\":\"Inetrnational Dining\",\"MCC_DSC\":\"Dining\",\"OUTER_POSTAL_CODE\":\"SW15\",\"INNER_POSTAL_CODE\":\"2NQ\",\"PREMISE_NUM\":\"\",\"PREMISE_NME\":\"PALM HILLS\",\"STREET_NUM\":\"42\",\"STREET_NME\":\"ORCHARD LN\",\"DISTRICT_NME\":\"\",\"CITY_NME\":\"SOUTHAMPTON\"},{\"MID\":\"416703\",\"TID\":\"16885575\",\"MCC_CDE\":\"2338\",\"M_NAME\":\"India house\",\"MCC_DSC\":\"Dining\",\"OUTER_POSTAL_CODE\":\"SW15\",\"INNER_POSTAL_CODE\":\"2PX\",\"PREMISE_NUM\":\"\",\"PREMISE_NME\":\"PALM HILLS\",\"STREET_NUM\":\"42\",\"STREET_NME\":\"ORCHARD LN\",\"DISTRICT_NME\":\"\",\"CITY_NME\":\"SOUTHAMPTON\"},{\"MID\":\"416703\",\"TID\":\"16885575\",\"MCC_CDE\":\"2338\",\"M_NAME\":\"Asian Rest\",\"MCC_DSC\":\"Dining\",\"OUTER_POSTAL_CODE\":\"SW15\",\"INNER_POSTAL_CODE\":\"2LP\",\"PREMISE_NUM\":\"\",\"PREMISE_NME\":\"PALM HILLS\",\"STREET_NUM\":\"42\",\"STREET_NME\":\"ORCHARD LN\",\"DISTRICT_NME\":\"\",\"CITY_NME\":\"SOUTHAMPTON\"},{\"MID\":\"416708\",\"TID\":\"16885589\",\"MCC_CDE\":\"2338\",\"M_NAME\":\"Indian Garments\",\"MCC_DSC\":\"Cloths\",\"OUTER_POSTAL_CODE\":\"SW15\",\"INNER_POSTAL_CODE\":\"2NW\",\"PREMISE_NUM\":\"\",\"PREMISE_NME\":\"COTTESBROOKE PARK\",\"STREET_NUM\":\"148\",\"STREET_NME\":\"PUTNEY BRIDGE RD\",\"DISTRICT_NME\":\"\",\"CITY_NME\":\"LONDON\"},{\"MID\":\"416709\",\"TID\":\"16885591\",\"MCC_CDE\":\"2339\",\"M_NAME\":\"new India Garments\",\"MCC_DSC\":\"Cloths\",\"OUTER_POSTAL_CODE\":\"SW15\",\"INNER_POSTAL_CODE\":\"2PU\",\"PREMISE_NUM\":\"\",\"PREMISE_NME\":\"COTTESBROOKE PARK\",\"STREET_NUM\":\"148\",\"STREET_NME\":\"PUTNEY BRIDGE RD\",\"DISTRICT_NME\":\"\",\"CITY_NME\":\"LONDON\"},{\"MID\":\"416709\",\"TID\":\"16885591\",\"MCC_CDE\":\"2339\",\"M_NAME\":\"new England Garments\",\"MCC_DSC\":\"Cloths\",\"OUTER_POSTAL_CODE\":\"SW15\",\"INNER_POSTAL_CODE\":\"2LR\",\"PREMISE_NUM\":\"\",\"PREMISE_NME\":\"COTTESBROOKE PARK\",\"STREET_NUM\":\"148\",\"STREET_NME\":\"PUTNEY BRIDGE RD\",\"DI\n";
++
+     public static List<String> getCatagories(){
+         List<String> items = new ArrayList<>();
+         items.add("Dining");
+@@ -91,7 +95,7 @@
+     }
+ 
+     public static final String GET_ADDRESS_URL = "https://maps.googleapis.com/maps/api/geocode/json?";
+-    public static final String GET_POS_URL = "http://192.168.43.228:8080/api/getPOS?";
++    public static final String GET_POS_URL = "http://192.168.43.71:8080/api/getPOS?";
+ 
+     public static android.location.Location getFixedLocation(){
+         android.location.Location location = new android.location.Location("FixedLocation");
+@@ -99,4 +103,10 @@
+         location.setLatitude(51.461561);
+         return location;
+     }
++
++    public static double calculateDistance( android.location.Location location1, android.location.Location location2) {
++        double distance = location1.distanceTo(location2);
++        Log.d("Distance", distance + "");
++        return distance;
++    }
+ }
+Index: app/src/main/java/in/nj/nearby/model/POSModel.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/in/nj/nearby/model/POSModel.java	(revision b7c6a4305b123369907fd04e3a509ec25530c4e7)
++++ app/src/main/java/in/nj/nearby/model/POSModel.java	(revision )
+@@ -9,11 +9,13 @@
+  */
+ 
+ public class POSModel {
+-    private String title,address,offers,category,distance="~";
++    private String title,address,offers,category,distance="~",phoneNumber="9555308310";
++    private double lat,lon;
+     private PosButtons.OnCallClickListener onCallClickListener;
+     private PosButtons.OnNavigationClickListener onNavigationClickListener;
+     private PosButtons.OnShareClickListener onShareClickListener;
+     private Marker marker;
++    int rewardMultiplier;
+ 
+     public POSModel(String title, String address, String offers, String category) {
+         this.title = title;
+@@ -93,4 +95,36 @@
+     public void setDistance(String distance) {
+         this.distance = distance;
+     }
++
++    public int getRewardMultiplier() {
++        return rewardMultiplier;
++    }
++
++    public void setRewardMultiplier(int rewardMultiplier) {
++        this.rewardMultiplier = rewardMultiplier;
++    }
++
++    public double getLat() {
++        return lat;
++    }
++
++    public void setLat(double lat) {
++        this.lat = lat;
++    }
++
++    public double getLon() {
++        return lon;
++    }
++
++    public void setLon(double lon) {
++        this.lon = lon;
++    }
++
++    public String getPhoneNumber() {
++        return phoneNumber;
++    }
++
++    public void setPhoneNumber(String phoneNumber) {
++        this.phoneNumber = phoneNumber;
++    }
+ }
+Index: app/src/main/AndroidManifest.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/AndroidManifest.xml	(revision b7c6a4305b123369907fd04e3a509ec25530c4e7)
++++ app/src/main/AndroidManifest.xml	(revision )
+@@ -8,9 +8,9 @@
+     <application
+         android:name=".ApplicationController"
+         android:allowBackup="true"
+-        android:icon="@mipmap/ic_launcher"
++        android:icon="@drawable/baclays"
+         android:label="@string/app_name"
+-        android:roundIcon="@mipmap/ic_launcher_round"
++        android:roundIcon="@drawable/baclays"
+         android:supportsRtl="true"
+         android:theme="@style/AppTheme">
+         <meta-data
+@@ -49,6 +49,17 @@
+             android:theme="@style/AppTheme.NoActionBar">
+         </activity>
+ 
++        <activity
++            android:name=".views.OffersListActivity"
++            android:screenOrientation="portrait">
++            <!--<intent-filter>
++                <action android:name="android.intent.action.MAIN" />
++                <category android:name="android.intent.category.LAUNCHER" />
++            </intent-filter>-->
++        </activity>
++        <activity android:name=".views.LocationActivity2"
++            android:screenOrientation="portrait"/>
++
+     </application>
+ 
+ </manifest>
+\ No newline at end of file
+Index: app/src/main/java/in/nj/nearby/model/model.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/in/nj/nearby/model/model.kt	(revision b7c6a4305b123369907fd04e3a509ec25530c4e7)
++++ app/src/main/java/in/nj/nearby/model/model.kt	(revision )
+@@ -18,6 +18,7 @@
+         var STREET_NME : String,
+         var DISTRICT_NME : String,
+         var CITY_NME : String,
++        var PHONE_NO : String,
+         var M_NAME : String
+ );
+ 
+diff --git app/src/main/res/drawable/map.png app/src/main/res/drawable/map.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..a99bf8f82dca2ae5e98d01d0a35d92ad2bf40972
+GIT binary patch
+literal 3128
+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
+S1th8f0000<MNUMnLSTaY!q2V%
+
+diff --git app/src/main/res/drawable/baclays.png app/src/main/res/drawable/baclays.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..b5579f397d04d74a8090e0e94b5312b64e806607
+GIT binary patch
+literal 21860
+zc${2!XH-+&^Yu*#fzZ1&>Am+NEeHrmwNV5mh%`l-BAtX@lp<X~Kq(?!Ktu!*Iu9KY
+z=@99?Ljr{4_4ohyez@zNd)AscbN0;a**D(O+>n-vlL`O;T4N*qy8r+J{`XKq|Gn&e
+z%Ul59fuym%?)`w7oewbYyw$+ov{8<1pt}blSN9?E)rOK^Zp_UYn6rYh2>&a!U)<)O
+zrSEOLQxW<NkNYam!c7?i>A>=XZeqCOWo@U}dA~}(4Z+SfOWCbIv#yxfdnUVk{-NSC
+z2^XkyIa}>)@>6p5*AZ3Nan(~P<V6dK^s;5-^5|Xtsn0~t!p&haBt-k+$?0*sGWK;X
+zLkqYuTm%bplq<6|^=>I-ZJ}QPk|TZ~=$dLbv`BXhsn=P<S|zk^5p;c|6(U9=cq3Q~
+z$u>|d2@+k9$F+2W6qDh{hNFGGRBcun9VG4mZf;N@+<=B`mVaNa($ZAmDB=@NJ`qJB
+zMXq}LLsPqt0%!YX6jHv4c?Wtf@YRmVa6{s*SUKw?OC{sNb`@4zt`)Ag&PqN4lO;UC
+z<$&2xD9M0ZRF7NvS^60gA|1e*)X%tSLp>tSDDD3ydly|p1?z4UH$1*7kz^5kC)-bR
+z7Xiz@aobkz?<e9AmYt7vmo*_({EsQaoNckP{rmX4+sE4j7`xkes%{SXh@b<GKM(IX
+zUCqTW`W5BEb@(#2Bw1XGmH1Mi{y&8Mg@tujPqnd=Z^E~2wq#8|vU??vZ7X=|PXFJ&
+zgDiL(`0~o(quO)la2O>wq<$_Hu>Q}Mk@R4gmO*afqV=Ya)z`cVUc$tCrSNxMNaYQ1
+z@!hcKrMz4?c+N5cc3&#2fC+t5p1+nlCsLK|Jw`2l@x|HD{dW!@v%OcS6~edQfL}W=
+z$>yx;6n52Enr@gD@`f~vd0RKn^-g}zz_TV8JAz}|yA41sG-Te-<GXJYsJe@v(Gc6j
+zP+9XQKgm-bE?bL<e1Hu~QmqJ2URi_D3PALeyYf5s%HA*Th*;h|LF$zd|Jm$O?8w}>
+z|8#H({lFkB`jf=%@XK3voKogjvVe3yz>-idM*alLOwP%xe6d(_m-L?rZT5q8g?jAi
+z&J9`YB!2&Q{RM+FNS4)|kUoaw+@L5{!JFQ&*~yv=+E`-MI_Z_9#;jipPnLDXKhLT;
+zJ3#8#y>E}@rygz3i-^IBPZD_Vjv<*0Z~`)sWjg3~3sS4>O|)iC;pESICylaZ6|L?M
+z|9mK3PZHh;@4RzirI$inn%B;0?$^84!B9FGl+Jh`spoC$!)D2SB@5DiaA~1r|JA}_
+zeqikKrsyXN+s%*S4DwNf4(Pz(Y%9FdGvjQQ;puew<EOKoO1}*Ixl89GIkl$POLXk^
+zm-of%DNkD}l&Jf{pHtPNmS#wcz?bC~5jsV636n7g@K@yPP~M?=#^TuACnvtHsedjM
+z8paAr%&u(9Po3SvOfnyDj+KeKq^dgKL-v#+{*+p(SiG~(Ukc*s7)f)X9hVFF+oY`T
+zm&@}!ek|i#p8!InJ{@-dxhx{S;yg_e1$73PCAS3YURDuXKkz?{yx%7K;vIiiE-%}=
+z4-U`yp7)PzU(g2qF#O!4VrslhQiL!aC5#+{TQXx1t0k;EiEbx9XhUCpQ3!uFFTWu@
+zCu*t2e==$PC06O3fR5@>Tb(lew4Iy!x;KP=^(b!Zh!Yx_BeXR7j^&Han=t*D1S4#4
+zkCHodsYt{57xxJTLbIH^Z1^!|ZaEa)v9_32ey-}+HL^*Zzl8F;<r>UpHM;Xrf4o`A
+zAU(P7p5kMqQ4IgHB*|V6tNp64oXg0|bx|)sZE4oNrG%PUc7{8`y!Dky!&>z=1g%$-
+z6pn02`cHvgGcNMmp3VDlv&vv>LVk^KE|5FGmkZCQ$=&#=aq|<d@OJnXH%;@WS_(Oe
+zl!uo(>n0(2uN~evw~#TW%`mYAjt5rHMjD-7alAjH-~2^s`kSDxI%C4j{!X3)P|Qv<
+z>&!D~s8bajG|B)?yeFS~><0K(oFG3H6SW$!-VqO%RbJ5NH2m=zrT)OF6{=)tf~oKI
+zJ-M58>-hzZ(vB2Wq0}e>f*FGLD}h3W$B=wZ#|gTwzgAY;H@}s$lyyv?u2In<qPK_z
+z!7kox*pkWS`V*cmlD=JL*efwT9Ezkqc(5JVw6K_65?i~18<bC6h%pZMCGf((%OM;l
+z^y(>>?PKkg$(Ii}EUPL&6iHl|^TJ0Hq;<`!b!EIo)#;dT@~siS6}}_xE3fBCJdP{d
+zy-98-ZWXtv?R-z1vN2cK_BAQ3=pBUJXnJBhl^I`@0w$|bEP66oxmVu1n5K~G5)eNy
+zb_9@AzU9OMHO*ipy*J4#8wIa>Hzj9pzM3xuLc^R;ZMEufhbsCp-0N<)g^w(Q@SF}Z
+zGusPT0DGzBtg8{TSQWRJ6j^}#SZ-ZFCblYHsg!oY7m<;JS)?XwdK8a*q73pXcO7%$
+zsE&2Ll+8NWb`NpZ?O=dz=-_C_EF2-!Iggm9Smcbq5A=iaoMTa-zRmV3P@>E4a&)f5
+z3y2H@wAN^X#7rG`rN3MiV;KG@K#9H30dq_4ddP08oK}n}mOmQ<K6q-EG?VsPT?C`=
+z#}1zn(Yc_afYLSxRb5++pAows4L!(|Ls@5l(%(q-+ZqhMDias<a~aF3wLnniymE+z
+z5okIbD9LPor>;H#4@o?CMy-QF<WP^Ff()0~uFfyCRdRCbkEPz*ihfiP{}6r)tL+G!
+zmV;~-GUwjI^?Tg2vw!OE{p`idU><~MKPWxOyE&kG_Woyq<bf*zi($|TgNOiRHZva&
+zci^5%%<S#JQgfc>4o}^tO-Jdr>iPM4ii---s3={hv!u76Bp?YZ&~{Y68tffYa{r!h
+zND#1)TvmkcNqTFV_h~s%+<@p_+^b6XSkN}l@Cmud{E>Gj`H5^;Ix!H(H(#d(IXoHv
+zym02bOIPGAK)^3fDrFBP+C}6M1<A1Q!;2Vd@AQPg!FWX#KM|=d0Dq2O=$*xIlW94o
+zBkP7^3;5xS(~PC04#k#rc>10ed&$0&&;>7Ngoi#pR1J+P(0W{vmMEcwDwYFko`I93
+zmjrM4yz2E-Z&4R)n92RP*2MpPZY|2~=yyi{J?c+u`DF%n5h7J5n<w_cnS0tPg<Op^
+zqcop;YB+Gh`t+eta8Q$aWEebCF+7y<jj3J2jYknM8qlHQH$B25J+{z5NzT+|7oZx^
+zjUxyR-eF%Alr|2kw_bK_)QK4+8yQP>P3SeTeS>(~)f2ToG+T(CW>|5JSETWNz@ht|
+zhMJ60l1wc${U+52Bk4_C6uLckB<pKad#N46o2d_3-@b@C>*3jUIhEY?Fo?hCzhj$z
+z2b=*v>^{5BDqoDX3q5*6M{;&8D{aGBQndn!)=<t4D<3EyhaMY4U);&!QY)pytP1?z
+zG|)3pso%WM7)s5ap@zm3s<uL_ZZ0l;2#ai_VQ=zJqpcK9x(jh(_;nPp_G*bthfTSM
+z<|!p(n`}Cz1eX|@BjDo<2r9n0_gwt9s2y`iN0MW_yLzsJ$&qH#Y-G+4T5()^wt)t;
+zo3h5Z=4|66BsQtRzNouOJx*a@`|{1fMd@zj+$QhHWpr)Idm(w2;xT6Y%f?t!*BdF~
+z;?(S@FV_?8e*bI7t1HB6FxZB07heGXO`?}_AhtaET=4O}?aY@ki5j}Uxebz#zw{4Z
+z$q7s+PX@R1cmoCBg+0O+)F)}CD2YB<c{X_;&6OmkftYkq-k^tQx&8Ms3tHVojV<{h
+zwtK!(NhvRz>AJcSRkU<WMQUSX#VtDVu{!G?0zdT8{W;AQP&ihYPtH|fUmhB(qP?RM
+zeyD^B?2`+lBeVG>q5w<+3MI~<Ik*Qi6txlDyI0HXD49f%BJwWr@Oq60q@Vj`uMDUB
+zHx2cA?K`51cu5;Ud~1`@cTcqc-K}&h-l!7eSM7OEng?kVM8=MLQ$2w333X^cAmNxP
+zNX%W}DjY60F#e$0*H<FXFlGQr1<Q7Mk6x!i(3&XnVFy;!1u+=9kz-jDEaZo_rspc0
+zHhVF9=?a8~Kb<Fk$A12m6F?jeJfD&Wyc8^sN2gkvj(iY%M~mN7+m{FFF_0|W)^Dcz
+z6?KXn%{r;Urr3N4N)FI*q7JzA*R8`vaEi<_>=0*^qwg20F8{rdPVo-ZaypFQ^_w1>
+z=n}6gNKJ|>i}e|LDD}+nL`ee5z<9g91P1x0X}EF8sR(A*&B^u8pquFng*?7+e;yO&
+zBNf}@ltkA}MN=3h#V7n3#INv1Qx4T@$HeLkC=a`LJIpbyFl{_0%%Qhf*4Z8o8{ZoK
+z?-t)q2UHHr36Qh`0<}Tdt@dxip8R@>n+yt(NyTyzjzPTz%p*6Q!TrE(r_%9F5;!yW
+z;j)NfZne;}(KzGBEinfm>Yq|dpFQW}`!vzw12=7^-bx|t%0Bs>aiZ>m$uz=}h$Gw+
+zd~zRxnLGfiO(^O`dtRphQgF*m#%n8(1eXtSQVaIgKYXBY$nA`rZ>x;%>zi~Wgp3m8
+z2!MKl3$=@%OZ(>iYtJuJhD2%wJ;wfKi_soU-FeSg8kY)JhW;aPn<CGRkvp=6*V48k
+zp<T)4`Oyv>Pz>&`u%6U-JPk?|*Y;D=YU~%*^t0``zl}=>V+Tpt6g%PhVc+iib+Ug7
+z1W>2xTAO71&To|%ETAYcwWi56a!Tw`dc({7#=cYVNHH=ZuhYFBrHy?_3y&+f1U}Hw
+z@~1T>+*&HM*RuJYUMRi=XLbghSQzPxHT{H)dl~MW8JZTSLjRnqd+4<+I{}n^EU}n;
+z?efFd3kDlxb3gozl4h)4?{7pI@`Xg^dtH0v7uj8s;ST7*vk~`LHvPI*T*O?(SqH_W
+z;PWKJJu7a{4)NeuEM$N|DC!;;yf<YK;++JhnJcVn+S9+~E$Kp2T6tHbkOq4KUNZ8T
+zz2r|a)#wz733*lh(U2Lfe9IJD>2&<}x>0l>FR7?$;j8H0Qy?P)pyo<DvC}6y_&*b1
+zs@tgN>r6+0$?Jhwe&Sh_8L6&fE(5^jMV_1YL~@Yt5$K!$@!U&Zj55ko1rR4X0YkbA
+zw6>G37)sNifugVH_8-la??SyVBGp<>G%S(?<LX61`x_P|5<3=qc`HIhUhl02aO}jZ
+zBziuN8&yiW%lezNf3dkLlW6-V5^9&ng{p?7=abj6-+>-J!%**v=RDLEYE8vS2szUO
+zwwT+R%bt{KA2m$EK6^o$Ls1d85FbIWYC&>@`c8l^?8CyQqWeO)n%M(elmcqpfV97#
+z_{&8<DWmm<G=&X%{nfmfHD1O;NI%5j*|Wnxk4^x5Go%FL;CYZ`2R^tG?CyRT%7S}Q
+z3#!~z47jrYZm0sd42A+Us<b&azKQ{m9K{R;oJ5FIFngp9rz*T4;_!-}FY7?gqP=TQ
+z3UP7^(eDnq;S7&WBX1BchV4-0vP-LMeAl|s3aeh6k~LxfUkfFC5+&_7X8JvsB3L&+
+z#c}g8jEXJszW!<$gY>$8trH%&@afGL_^Yj#nq|iV#7YhAxc}TcZ=V5ttzlmjV?T15
+z>1%0A-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
+A9RL6T
+
+diff --git app/src/main/res/drawable/transfer.png app/src/main/res/drawable/transfer.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..3d39444fd1347eda789cc111da1af5f33824242c
+GIT binary patch
+literal 1387
+zc%1E&`%hFy6vxjU23Qb~%Tiw50$rO*QXz(5SwY!d7>iqRS&+h-AdIa@)6hyFu2|8%
+zSJNzrAjVQdrIkn1(zGGGG~kMzrWH~wi)~XaKWJ~dihWQE7|bFdo&5{iq`!8ObLM;I
+zbIzIhVRGs%=Ir3Wm_PssHf<;Q00MYT<;S<;s_y;Xs5(D86M9^l-*|w_jXRA1eW%wf
+z@Ac(zK;`z`)c_%1c}*BQ(7g}97fi%hP*d{fZReYsB6w$S(wCNwHI>i4Wf=Bxh8MLb
+z7f2fGnO*)#rq<x^%fIe>F28o>Ncn@s4CU4RsqxQm*7xCvD+vC1Nw)KgFUwA+Gj;P{
+zRZG)PKDhRHaH`_i^~IDgrU`D(L9@GD7ou-<u4^t|PM`D?V)G6NtcO*#l&@t3PSyjm
+znDONR&{}f9lY`R&ptQ~qCn$pWs}^dr@!KlM4U<C<8z8h6u?9jb5c`bKV#Epw%|YxY
+zp<56$6S@I07oi%&N(c=?><*zTSUOS1cyoWXybuOWnfRs&bTOip_wOcj50<((2n90-
+zM$koz)(k=Uh|no4omI>C!oZb@-{Tcei`G~{`JB+*SQ_9U6p}bF!cderv_()liPDdy
+z2DN-$ga{)}$^vVUsM8BHk0@8LbWM~Wa$v$P4mOCotpfdyD1#iR<sU>SG-5Lc!J;lh
+zpsx^R2unYTvYP`FZsH(O)U`qH8`{b!fi4hgM=X?3Jz^UPJ%pHr&{V`K2|a>XGok5-
+z^%CVEVmF9VhS)4o4kLrFSo1zuvhdaQP$0?<ETw5@Tfkz%4+7vKF+jqtSV3qnsm2&O
+zHz5QAqbe2Db|rFoI%OL@8#nK+UHk3Fs=M<U?#sjW^45?>7A`p#W33%o+RCk^a?ALv
+z-oEdfsl{~-z~E7%1T6khJ@*EiS5uo;OP9R5{gPL+k_PUTl9Lh`<onuqu>A5Vzcc)>
+zMkw_=p4qyx5?O~Kt?aQq0K&&-RwwQi*?pws(oy@-6(<<Z92nD&L_oq^&9YjMP;R4L
+z3mb>-kLpE;`e}#zf(n9uzc`nR!EbQFvmU{TDVsM@o=JXE&!1*{W|aVirBl4Dw`!@$
+z-akAta#a7bPwCFpr#$B-=2z2a@3{RxY|guVH`47Wj!c~N<hmvwzUJc??>QA0Q&u#(
+zwz2;Ox8tR$mbt91nQ>1?o~>;8MuIc>*z51^iPoq5pZ4F<CVjk9rQ#1q+o9nR?~i-&
+m{KQzBe)`<Mm`DJhR2^K1yBed}l;z0n@E(}9nMqG3J^nZ2N+Npz
+
+diff --git app/src/main/res/drawable/statement.png app/src/main/res/drawable/statement.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..cb56873d5550cb832c7e8a8dcc31495af3e61249
+GIT binary patch
+literal 834
+zc%17D@N?(olHy`uVBq!ia0vp^DIm<j1|$m}O$`B3EX7WqAsj$Z!;#X#z`*p=)5S5Q
+zV$R#Ud$WTRCE7l|UfK1d@xcpr4y(+AM?DJ)Ry@#JG`X9vbx}k?QP9DYt}O1Qfy;l1
+zbCgcxQ_|q`65Oi5>L}3C6uRVt#TBk=75h$jzEk_2?{n|_9P^kbXFZ*Q4U9qH_1YKT
+z7>$eh3%1`rE-T=#{HW?;!&luoCE5np4i&N=yuOK1d2d8(=yQc68JC{sjzR%LKBZ;7
+zr|)UWF>}{imCxp5-u-)T$NrRO8PlZSez&?kVP>#ufAy+268AP8vFMOs7krGY^Oz$<
+z@bY?oaqiS-Dg_%8PVDZm*q3##y)2wnaO3*7#U5;o+nB4l-~GS$aNDAf*=^f(kn{l!
+z3(>D${<0=>_apE2+j`r#Oq(}}M@Z24fX`V=^Qb64|H{)sSZ#y|rc5}qC+t(Z{(9>(
+znX&qEyHh44K0{OOQMa7$&hj7DU-M=2tgl^)s`4`Oa5=+RZ2H`1`<6NLK21|aG15nR
+z`d;n>i@B25G_Pat?5KQDvc2D0XHRM;(7dhN*POY-`6eS#_mk2i*W1rCK1mtz#k~FI
+zbgg6E|LXp$5LKvdT+(*tPJ~fP@X5cf`~4U#JYw1ZmAj{{W9FNB=6^^T6Z^{NK?iGv
+zr_?Voi3jt1((au)qpNM6^2{U6kHK8~Ons2qf|Kcy_R?o0RVE*}d8UR_hw*n~tmw0|
+zZbxo!a`bJg$umg5ki*<}ZBFs-Qw!9h!(Pif@-HwyFjtE?8|Z^@hnK<U|NUT`)7`OD
+zt9kam74exC`4YYEM?SA=mS*kj(0mX#d8c!VpoOR)|0|!YKfDoXd2Dh_>a*mM8_sUp
+z<7>OxdgI666FMST{Ft7<{Iht<;TN_Aj21Uk*h*enKe~T@n&AVE)7PI!?<%}wn$Y=l
+oJEMH#%Z?w<*?G@^!Ii&E@kQpV{O>X705b)Hr>mdKI;Vst0C9wC&j0`b
+
+diff --git app/src/main/res/drawable/filter.png app/src/main/res/drawable/filter.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..f311a54713757fbc0b3915801f720f432ac455bb
+GIT binary patch
+literal 1650
+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
+
+diff --git app/src/main/res/drawable/home.png app/src/main/res/drawable/home.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..c0d0b9c8278c45f2335092bf62264d46db9eee96
+GIT binary patch
+literal 10619
+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
+zjDAOG8;;2Mez$p%0D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
+W-x(%;%Q~YN02KvI`5KUA#Qy?X?_qBM
+
+diff --git app/src/main/res/drawable/nearby.png app/src/main/res/drawable/nearby.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..244947cadea53ca9b7bd9887040c4dadd7a4675e
+GIT binary patch
+literal 2200
+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
+a&-@!L1#4Ospa$9i0000<MNUMnLSTZz7Z=U|
+
+diff --git app/src/main/res/drawable/help.png app/src/main/res/drawable/help.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..c38287c96a8e849dbe32137e3f99d724a257c0a3
+GIT binary patch
+literal 6605
+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
+H@=W_LMAcc%
+

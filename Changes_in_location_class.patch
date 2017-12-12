@@ -1,0 +1,75 @@
+Index: app/src/main/java/in/nj/nearby/views/LocationActivity.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+--- app/src/main/java/in/nj/nearby/views/LocationActivity.java	(revision 8814710ff510ee0247c5d537ac25f622a624e022)
++++ app/src/main/java/in/nj/nearby/views/LocationActivity.java	(revision )
+@@ -415,6 +415,7 @@
+         int padding = (int) (width * 0.10);
+         CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, width, height, padding);
+         gMap.animateCamera(cu);
++        gMap.i
+         posModel.setOnNavigationClickListener(new PosButtons.OnNavigationClickListener() {
+             @Override
+             public void onClick(View view) {
+@@ -979,6 +980,7 @@
+ 
+ private View posDialog;
+     RecyclerView posItemRecycleView;
++    int lastPosition;
+     void createMarkersDialog(List<POSModel> posModels,int focusPosition){
+        /* final Dialog dialog = new Dialog(LocationActivity.this);
+         dialog.setContentView(R.layout.layout_dialog_poslist);
+@@ -993,6 +995,51 @@
+         posItemRecycleView.setLayoutManager(layoutManager);
+         posItemRecycleView.setItemAnimator(new DefaultItemAnimator());
+         posItemRecycleView.setAdapter(adapter);
++
++        posItemRecycleView.addOnScrollListener(new RecyclerView.OnScrollListener() {
++            @Override
++            public void onScrolled(RecyclerView recyclerView, int dx, int dy) {
++                super.onScrolled(recyclerView, dx, dy);
++
++
++
++                //gMap.animateCamera(CameraUpdateFactory.newLatLng(posModelList.get(centerPos).getMarker().getPosition()));
++            }
++
++            boolean scrolling,stoped;
++            @Override
++            public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
++                super.onScrollStateChanged(recyclerView, newState);
++                switch (newState) {
++                    case RecyclerView.SCROLL_STATE_IDLE:
++                        System.out.println("The RecyclerView is not scrolling");
++                        if(scrolling){
++                            int center = posItemRecycleView.getWidth()/2;
++                            View centerView = posItemRecycleView.findChildViewUnder(center,posItemRecycleView.getTop());
++                            int centerPos = posItemRecycleView.getChildAdapterPosition(centerView);
++                            Log.d("CenterPOS",centerPos+"");
++                            if(lastPosition!=centerPos && centerPos>=0){
++                                POSModel posModel = posModelList.get(centerPos);
++                                LatLng latLng = posModel.getMarker().getPosition();
++                                gMap.animateCamera(CameraUpdateFactory.newLatLng(latLng));
++                                lastPosition = centerPos;
++                                posItemRecycleView.getLayoutManager().scrollToPosition(centerPos);
++                            }
++                            scrolling = false;
++                        }
++                        break;
++                    case RecyclerView.SCROLL_STATE_DRAGGING:
++                        System.out.println("Scrolling now");
++                        break;
++                    case RecyclerView.SCROLL_STATE_SETTLING:
++                        System.out.println("Scroll Settling");
++
++                        scrolling = true;
++                        break;
++                }
++            }
++        });
++
+         posDialog.setVisibility(View.VISIBLE);
+         focusPosItem(focusPosition);
+         //dialog.show();
