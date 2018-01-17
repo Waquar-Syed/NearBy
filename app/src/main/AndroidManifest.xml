@@ -52,10 +52,10 @@
         <activity
             android:name=".views.OffersListActivity"
             android:screenOrientation="portrait">
-            <!--<intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>-->
+            <intent-filter>
+                <action android:name="in.nj.nearby.views.OFFER_LIST_ACTIVITY" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
         <activity android:name=".views.LocationActivity2"
             android:screenOrientation="portrait"/>

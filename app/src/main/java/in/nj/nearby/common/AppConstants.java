@@ -95,7 +95,7 @@ public class AppConstants {
     }
 
     public static final String GET_ADDRESS_URL = "https://maps.googleapis.com/maps/api/geocode/json?";
-    public static final String GET_POS_URL = "http://192.168.43.71:8080/api/getPOS?";
+    public static final String GET_POS_URL = "http://192.168.43.97:8080/api/getPOS?";
 
     public static android.location.Location getFixedLocation(){
         android.location.Location location = new android.location.Location("FixedLocation");
