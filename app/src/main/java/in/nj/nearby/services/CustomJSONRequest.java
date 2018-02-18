@@ -26,7 +26,7 @@ public class CustomJSONRequest extends JsonObjectRequest {
     protected Map<String, String> getParams() throws AuthFailureError {
         if(demoRequest.getParameters()==null)
             return super.getParams();
-//hi
+
 
         return demoRequest.getParameters();
     }
