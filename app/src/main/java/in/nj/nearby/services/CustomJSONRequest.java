@@ -27,6 +27,7 @@ public class CustomJSONRequest extends JsonObjectRequest {
         if(demoRequest.getParameters()==null)
             return super.getParams();
 
+
         return demoRequest.getParameters();
     }
 
