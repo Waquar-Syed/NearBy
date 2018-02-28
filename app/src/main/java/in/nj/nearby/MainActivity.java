@@ -1,12 +1,12 @@
 package in.nj.nearby;
 
 import android.content.Intent;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.design.widget.FloatingActionButton;
+import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.Button;
 
-import in.nj.nearby.views.LocationActivity;
 import in.nj.nearby.views.OffersListActivity;
 
 public class MainActivity extends AppCompatActivity {
@@ -22,6 +22,13 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 startActivity(new Intent(MainActivity.this, OffersListActivity.class));
+            }
+        });
+        FloatingActionButton fab = findViewById(R.id.fab);
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startActivity(new Intent(MainActivity.this, VoiceRecognitionActivity.class));
             }
         });
     }

@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="in.nj.nearby">
+          package="in.nj.nearby">
+
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-    <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.CALL_PHONE"/>
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+
     <application
         android:name=".ApplicationController"
         android:allowBackup="true"
@@ -15,11 +18,12 @@
         android:theme="@style/AppTheme">
         <meta-data
             android:name="com.google.android.maps.v2.API_KEY"
-            android:value="AIzaSyCWcjr8FbpiGxerhFjKRWJH0j6LEl9A4OU" />
+            android:value="AIzaSyCWcjr8FbpiGxerhFjKRWJH0j6LEl9A4OU"/>
 
         <meta-data
             android:name="com.google.android.gms.version"
-            android:value="@integer/google_play_services_version" />
+            android:value="@integer/google_play_services_version"/>
+
         <activity
             android:name=".views.LocationActivity"
             android:label="@string/app_name"
@@ -37,8 +41,8 @@
             android:label="@string/app_name"
             android:screenOrientation="portrait">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
 
@@ -53,11 +57,22 @@
             android:name=".views.OffersListActivity"
             android:screenOrientation="portrait">
             <intent-filter>
-                <action android:name="in.nj.nearby.views.OFFER_LIST_ACTIVITY" />
-                <category android:name="android.intent.category.DEFAULT" />
+                <action android:name="in.nj.nearby.views.OFFER_LIST_ACTIVITY"/>
+                <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
         </activity>
-        <activity android:name=".views.LocationActivity2"
+        <activity
+            android:name=".views.LocationActivity2"
+            android:screenOrientation="portrait"/>
+        <activity
+            android:name=".VoiceRecognitionActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme.NoActionBar"/>
+        <activity
+            android:name=".RewardsActivity"
+            android:screenOrientation="portrait"/>
+        <activity
+            android:name=".HomeActivity"
             android:screenOrientation="portrait"/>
 
     </application>
