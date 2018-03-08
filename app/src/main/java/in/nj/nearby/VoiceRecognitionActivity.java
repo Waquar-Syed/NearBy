@@ -205,6 +205,8 @@ public class VoiceRecognitionActivity extends Activity implements RecognitionLis
             startActivity(intent);
         } else if (matches.get(0).equalsIgnoreCase("Nearby")) {
             startActivity(new Intent(this, OffersListActivity.class));
+        }else if(matches.get(0).equalsIgnoreCase("transactions")){
+            finish();
         }
     }
 
